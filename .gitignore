@@ -1,0 +1,9 @@
+/target
+/.idea
+
+# artefacts from manual/additional build (not cargo)
+/build
+
+# used during "run_qemu.sh" to store volumes that are mapped inside the VM
+/qemu/.vm-volume
+
