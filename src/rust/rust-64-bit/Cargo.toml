@@ -1,0 +1,25 @@
+[package]
+name = "rust-multiboot2-64-bit-kernel"
+description = """
+Defines the 64-bit entry point for the boot processor (core).
+All (used) symbols will be transferred into the final ELF.
+"""
+version = "0.1.0"
+authors = ["Philipp Schuster <philipp.schuster@cyberus-technology.de>"]
+edition = "2018"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# https://doc.rust-lang.org/reference/linkage.html
+# "This format is recommended for use in situations such as linking Rust code into an
+#  existing non-Rust application because it will not have dynamic dependencies on other Rust code."
+crate-type = ["staticlib"]
+
+[dependencies]
+x86 = "0.39.0"
+uefi = "0.11.0"
+x86_64 = "0.14.3"
+multiboot2 = "0.10.1"
+utils = { path = "../rust-utils" }

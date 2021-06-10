@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+# This file invokes all the Rust builds, as long as we can't use a Cargo workspace.
+# See "cargo-workspace-info.md"
+
+set -e
+set -x
+
+# nice "hack" which make the script work, even if not executed from "./"
+DIR=$(dirname "$(realpath "$0")")
+cd "$DIR" || exit
+
+# libs are regular no_std custom libs, that are not specific to a target
+# We develop them as we would use them on the host platform. This makes test
+# execution easier.
+LIBS=(
+    "rust-utils"
+)
+
+for LIB in "${LIBS[@]}"
+do
+   # the parentheses will start a subshell => we have no need to cd back
+   (
+     cd "$LIB" || exit
+     cargo build
+     cargo test
+   )
+done
+
+
+
+
+BINS=(
+    # currently unused
+    # "rust-32-bit"
+    "rust-64-bit"
+)
+
+for BIN in "${BINS[@]}"
+do
+   # the parentheses will start a subshell => we have no need to cd back
+   (
+     cd "$BIN" || exit
+     cargo build
+     # tests don't work so far
+     # cargo test --target x86_64-unknown-linux-gnu
+   )
+done

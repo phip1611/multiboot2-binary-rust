@@ -16,13 +16,13 @@ OVMF_BUILD_ARTIFACT_PATH="${EDK2_PATH}/Build/OvmfX64/DEBUG_GCC5/FV"
 OVMF_FW_PATH="${OVMF_BUILD_ARTIFACT_PATH}/OVMF_CODE.fd"
 OVMF_VARS_PATH="${OVMF_BUILD_ARTIFACT_PATH}/OVMF_VARS.fd"
 
-
-
 # this directory contains the volumes for QEMU testing
 # + additional config files for grub and more (if necessary)
 QEMU_DIR="./qemu"
 QEMU_VOLUME_DIR="${QEMU_DIR}/.vm-volume"
 
+BUILD_DIR="./build"
+FINAL_ELF="${BUILD_DIR}/multiboot2-binary.elf"
 
 fn_main() {
   rm -rf "${QEMU_VOLUME_DIR}"
@@ -72,7 +72,9 @@ fn_start_qemu() {
           # using this, the program can write to X86 I/O port 0xe9 and talk
           # to qemu => debug output
           "-debugcon"
-          "/dev/stdout"
+          # or "/dev/stdout" => it appears in terminal window
+          # this is poorly documented! I found out by coincidence, that I can use a file like this
+          "file:qemu/debugcon.txt"
 
           # Setup monitor
           "-monitor"
@@ -92,7 +94,7 @@ fn_prepare_grub_installation() {
   #
   grub-mkstandalone -O x86_64-efi -o "${QEMU_VOLUME_DIR}/EFI/BOOT/BOOTX64.EFI" \
       "/boot/grub/grub.cfg=${QEMU_DIR}/grub.cfg" \
-      "/boot/multiboot2-rust-binary.elf=./build/multiboot2-rust-binary.elf"
+      "/boot/multiboot2-binary.elf=$FINAL_ELF"
       # this is poorly documented, but the tool allows to specify key-value
       # pairs where the value on the right, a file, will be built into the "(memdisk)"
       # volume inside the grub image
