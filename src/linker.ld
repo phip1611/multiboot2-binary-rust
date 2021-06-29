@@ -17,7 +17,7 @@ SECTIONS {
     /* Multiboot2-Header must be 64-bit (8 byte) aligned according to spec. We ensure this also in the *.asm-file
        but safe is safe. Strictly speaking, the 1MiB padding (see above) is 8-byte aligned anyway. */
     . = ALIGN(8);
-    .boot :
+    .multiboot_header :
     {
         /* ensure that the multiboot header is at the beginning */
         *(.multiboot_header)

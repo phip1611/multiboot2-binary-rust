@@ -12,7 +12,7 @@ cd "$DIR" || exit
 
 # libs are regular no_std custom libs, that are not specific to a target
 # We develop them as we would use them on the host platform. This makes test
-# execution easier.
+# execution easier (as long as https://github.com/rust-lang/cargo/issues/9710 exists).
 LIBS=(
     "rust-utils"
 )

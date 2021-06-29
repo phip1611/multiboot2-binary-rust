@@ -18,36 +18,22 @@ SECTION .text
 
     start:
         ; set stack top (stack grows downwards, from high to low address)
-        ; TODO maybe this is not necessary: according to 2.3.4 x64 state (UEFI spec), a 128KiB stack is already available
+        ; TODO maybe this is not necessary: according to 2.3.4 x64 state (UEFI spec),
+        ;  a 128KiB stack is already available (but probably used by GRUB..)
         mov     rsp, _initial_stack_top
         mov     rbp, _initial_stack_top
 
-        ; Check for multiboot2 magic value in eax register.
-        ; If grub loads our multiboot2 binary properly, the value is stored there.
-        ; Otherwise, we go to label "bad_boot_exit" and stop/halt.
-        ; Note, that register ebx contains a pointer to the multiboot2 data structure.
-        cmp     eax, 0x36d76289
-        jne     bad_boot_exit
-
+        ; Call Rust binary with two parameters
+        ; eax: Multiboot2 Magic Value
+        ; ebx: pointer to Multiboot2 information structure
+        ;
+        ; first argument is edi, second is esi => SYSTEM V x86_64 calling convention
+        mov     edi, eax
+        mov     esi, ebx
         jmp     entry_64_bit
+                ; here we should only land if some error occurs
+        cli     ; clear interrupts, otherwise the hlt will not work
         hlt
-
-        ; "start" is defined by the Rust binary.
-        ; When the linker builts everything into a single binary,
-        ; this is available.
-        ; jmp     entry_32_bit
-
-    ; write "bad boot" in hexspeak into some registers and stop/halt
-    bad_boot_exit:
-        mov     rbx, 0x0badb001
-        mov     rcx, 0x0badb001
-        mov     rdx, 0x0badb001
-        mov     rdi, 0x0badb001
-        mov     rsi, 0x0badb001
-        cli
-        .hlt:
-        hlt
-        jmp     .hlt ; make sure our program definitely halts, even if HLT is cancelled
 
 ; -----------------------------------------------------------------
 SECTION .bss

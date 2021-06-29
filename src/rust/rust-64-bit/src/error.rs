@@ -1,51 +1,29 @@
-use core::sync::atomic;
-use core::sync::atomic::Ordering;
-use utils::convert::bytes_to_hex_ascii;
-use crate::qemu_debug::{qemu_debug_stdout_char_arr, qemu_debug_stdout_str};
+use derive_more::Display;
 
 /// If these errors occur very soon in the boot process,
 /// these errors are stored in multiple registers.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Display)]
 #[allow(dead_code)]
+#[repr(u32)]
 pub enum BootError {
+    Multiboot2MagicWrong = 0x00000000,
+    /// Happens when a stack array allocated is not large enough. We rely on a big enough buffer
+    /// in several panic and logging utilities.
+    StackArrayTooSmall = 0x00000001,
+
+    ///
+    PanicGeneric = 0xe0000000,
+    PanicAlloc = 0xe0000001,
+    PanicDealloc = 0xe0000002,
     /// Multiboot2 information structure (passed via `ebx` register) doesn't contain UEFI system table.
-    MBISMissingSystemTable = 0x00000001,
-    /// A Rust panic
-    Panic = 0xefffffff,
+    PanicMBISUefiSystemTableMissing = 0xe0000003,
+
     Other = 0xffffffff,
 }
 
 impl BootError {
     pub fn code(self) -> u64 {
         0x0bad_b001 << 32 | (self as u64)
-    }
-    pub fn qemu_print(self) {
-        let code = self.code();
-        let msg = "BOOT ERROR: 0x";
-        let chars = bytes_to_hex_ascii::<16>(&code.to_be_bytes());
-        qemu_debug_stdout_str(msg);
-        qemu_debug_stdout_char_arr(&chars);
-        qemu_debug_stdout_char_arr(&['\n']);
-    }
-}
-
-
-pub fn bad_boot_exit(err: BootError) -> ! {
-    // error code in all of this registers mean => Rust panic
-    unsafe { asm!("mov r8, {0}", in(reg) err.code()) };
-    unsafe { asm!("mov r9, {0}", in(reg) err.code()) };
-    unsafe { asm!("mov r10, {0}", in(reg) err.code()) };
-    unsafe { asm!("mov r11, {0}", in(reg) err.code()) };
-    unsafe { asm!("mov r12, {0}", in(reg) err.code()) };
-    unsafe { asm!("mov rax, {0}", in(reg) err.code()) };
-    unsafe { asm!("mov rbx, {0}", in(reg) err.code()) };
-    unsafe { asm!("mov rcx, {0}", in(reg) err.code()) };
-    unsafe { asm!("mov rdx, {0}", in(reg) err.code()) };
-    unsafe { asm!("mov rdi, {0}", in(reg) err.code()) };
-    unsafe { asm!("mov rsi, {0}", in(reg) err.code()) };
-
-    loop {
-        atomic::compiler_fence(Ordering::SeqCst);
     }
 }
 

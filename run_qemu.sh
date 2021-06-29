@@ -45,6 +45,9 @@ fn_start_qemu() {
 
           # Use a modern machine, with acceleration if possible.
           "-machine"
+          # "q35" # also works, but slower
+          # Interesting to see how this changes CPU-ID
+          # Without KVM the Hypervisor is QEMU, else its KVM
           "q35,accel=kvm:tcg"
 
           # Allocate some memory

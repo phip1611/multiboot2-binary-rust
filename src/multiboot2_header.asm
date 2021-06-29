@@ -10,7 +10,7 @@
 ; - spec https://www.gnu.org/software/grub/manual/multiboot2/multiboot.pdf
 ; - https://intermezzos.github.io/book/first-edition/multiboot-headers.html
 ;
-; External symbol, that comes "start.asm"
+; External symbol, that comes from "start.asm"
 EXTERN start
 
 ALIGN 8 ; according to spec, the header must be 64-bit (8 byte) aligned
