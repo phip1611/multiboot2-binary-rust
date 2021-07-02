@@ -42,7 +42,9 @@ function fn_compile_nasm() {
 function fn_link_final_elf() {
   # link all object files together using the linker script (multiboot header will be first in binary).
   # We use GNU ld as linker.
-  ld -n -o "$FINAL_ELF" \
+  ld -n \
+    -pie \
+    -o "$FINAL_ELF" \
     -T "src/linker.ld" \
     -m elf_x86_64 \
     "${BUILD_DIR}/multiboot2_header.o" \

@@ -60,10 +60,29 @@ section .multiboot_header
         mb2_header_tag_efiamd64_start:
             dw  9       ; type  (16bit)
             dw  0       ; flags (16bit) (0 means required, 1 optional)
-            dd  mb2_header_tag_efiamd64_end - mb2_header_tag_efiamd64_start      ; size  (32bit)
-            ; According to spec, this has a higher precedence, than the regular start-symbol from the ELF.
-            dd  start   ; entry_addr (32bit)
+            dd  mb2_header_tag_efiamd64_end - mb2_header_tag_efiamd64_start     ; size  (32bit)
+            ; Address to jump to.
+            ;  GRUB source code: https://github.com/rhboot/grub2/blob/a53e530f8ad3770c3b03c208c08ae4162f68e3b1/grub-core/loader/multiboot_mbi2.c#L212
+            ; According to MB2 spec, this has a higher precedence, than the regular start-symbol from the ELF.
+            ; - https://stackoverflow.com/questions/36007975/compile-error-relocation-r-x86-64-pc32-against-undefined-symbol
+            ; - https://www.nasm.us/xdoc/2.10rc8/html/nasmdoc9.html#section-9.2.5
+            ; plt: prodecure linkage table
+            ; - https://reverseengineering.stackexchange.com/questions/1992/what-is-plt-got
+            dd  start WRT ..plt   ; entry_addr (32bit)
         mb2_header_tag_efiamd64_end:
+        ; ------------------------------------------------------------------------------------
+        ; "Relocatable"-tag
+        ALIGN 8
+        mb2_header_tag_relocatable_start:
+            dw  10      ; type  (16bit)
+            dw  0       ; flags (16bit) (0 means required, 1 optional)
+            dd  mb2_header_tag_relocatable_end - mb2_header_tag_relocatable_start   ; size  (32bit)
+            ; According to spec, this has a higher precedence, than the regular start-symbol from the ELF.
+            dd  0x100000    ; lowest possible address (8MiB)
+            dd  0xffffffff  ; highest possible address (4GiB)
+            dd  4096        ; alignment
+            dd  0           ; preference: 0 (none), 1 (lowest possible), 2 (highest possible)
+        mb2_header_tag_relocatable_end:
         ; ------------------------------------------------------------------------------------
         ; REQUIRED END TAG
         ALIGN 8

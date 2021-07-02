@@ -7,12 +7,18 @@
 /** The "start"-symbol from start.asm. */
 ENTRY(start)
 
+/* I HAVE NO IDEA WHAT THIS IS. TAKEN FROM https://sourceware.org/binutils/docs/ld/PHDRS.html */
+/* Because of: https://stackoverflow.com/questions/63420037/error-phdr-segment-not-covered-by-load-segment1 */
+PHDRS
+{
+  headers PT_PHDR PHDRS ;
+  interp PT_INTERP ;
+  text PT_LOAD FILEHDR PHDRS ;
+  data PT_LOAD ;
+  dynamic PT_DYNAMIC ;
+}
+
 SECTIONS {
-    /* According to https://intermezzos.github.io/book/first-edition/hello-world.html
-     * there is lots of memory mapped I/O and 1MiB is a conventional padding (legacy?!)
-     * TODO find out if this only is valid for legacy BIOS boot or also for UEFI!
-     */
-    . = 1M;
 
     /* Multiboot2-Header must be 64-bit (8 byte) aligned according to spec. We ensure this also in the *.asm-file
        but safe is safe. Strictly speaking, the 1MiB padding (see above) is 8-byte aligned anyway. */
