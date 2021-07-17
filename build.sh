@@ -38,12 +38,10 @@ function fn_compile_nasm() {
 
 
 # Builds the final ELF64-x86_64, that is multiboot2-compatible and contains
-# the code from all object files.
+# the code from all object files using GNU ld.
 function fn_link_final_elf() {
-  # link all object files together using the linker script (multiboot header will be first in binary).
-  # We use GNU ld as linker.
+  # Link all object files together using the linker script.
   ld -n \
-    -pie \
     -o "$FINAL_ELF" \
     -T "src/linker.ld" \
     -m elf_x86_64 \

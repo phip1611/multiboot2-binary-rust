@@ -68,7 +68,7 @@ section .multiboot_header
             ; - https://www.nasm.us/xdoc/2.10rc8/html/nasmdoc9.html#section-9.2.5
             ; plt: prodecure linkage table
             ; - https://reverseengineering.stackexchange.com/questions/1992/what-is-plt-got
-            dd  start WRT ..plt   ; entry_addr (32bit)
+            dd  start   ; entry_addr (32bit)
         mb2_header_tag_efiamd64_end:
         ; ------------------------------------------------------------------------------------
         ; "Relocatable"-tag

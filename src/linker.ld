@@ -20,8 +20,10 @@ PHDRS
 
 SECTIONS {
 
-    /* Multiboot2-Header must be 64-bit (8 byte) aligned according to spec. We ensure this also in the *.asm-file
-       but safe is safe. Strictly speaking, the 1MiB padding (see above) is 8-byte aligned anyway. */
+    /* Not relevant anymore, because our binary gets relocated by GRUB. */
+    /* . = 8M; */
+
+    /* Multiboot2-Header must be 64-bit (8 byte) aligned according to spec. */
     . = ALIGN(8);
     .multiboot_header :
     {

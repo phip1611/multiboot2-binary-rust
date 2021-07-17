@@ -17,21 +17,42 @@ SECTION .text
 [BITS 64]
 
     start:
-        ; set stack top (stack grows downwards, from high to low address)
-        ; TODO maybe this is not necessary: according to 2.3.4 x64 state (UEFI spec),
-        ;  a 128KiB stack is already available (but probably used by GRUB..)
-        mov     rsp, _initial_stack_top
-        mov     rbp, _initial_stack_top
-
-        ; Call Rust binary with two parameters
-        ; eax: Multiboot2 Magic Value
-        ; ebx: pointer to Multiboot2 information structure
+        ; Save values in non-volatile registers. With these, we can call the entry function
+        ; in the Rust binary with two parameters accordingly.
+        ;   eax: Multiboot2 Magic Value
+        ;   ebx: pointer to Multiboot2 information structure
         ;
         ; first argument is edi, second is esi => SYSTEM V x86_64 calling convention
         mov     edi, eax
         mov     esi, ebx
-        jmp     entry_64_bit
-                ; here we should only land if some error occurs
+
+        ; Set stack top (stack grows downwards, from high to low address).
+        ; GRUB already used the stack provided by the UEFI firmware and
+        ; Multiboot2 spec also says, application needs to set it's own stack.
+        mov     rsp, _initial_stack_top
+        mov     rbp, _initial_stack_top
+
+
+        ; NASM is really restricted, when it comes to access the `rip` register.
+        ; The only working way I found is using the `rel` keyword along with a symbol.
+        ; To use it with registers or immediates doesn't work.
+        ; Doc:
+        ;  - https://www.nasm.us/doc/nasmdoc7.html#section-7.2.1
+        ;  - https://www.tortall.net/projects/yasm/manual/html/nasm-effaddr.html
+
+        ; rbx: static link address
+        mov     rbx, .eff_addr_magic_end
+        ; rax: runtime address (relative to instruction pointer)
+        lea     rax, [rel + .eff_addr_magic_end]
+
+    .eff_addr_magic_end:
+        ; subtract address difference => offset
+        sub     rax, rbx
+        ; rax: address of Rust entry point (static link address + runtime offset
+        add     rax, entry_64_bit
+
+        jmp     rax
+        ; here we should only land if some error occurs
         cli     ; clear interrupts, otherwise the hlt will not work
         hlt
 
