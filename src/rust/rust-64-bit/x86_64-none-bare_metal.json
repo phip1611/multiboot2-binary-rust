@@ -45,17 +45,28 @@
     "  - https://doc.rust-lang.org/nightly/nightly-rustc/rustc_target/spec/enum.LinkerFlavor.html",
     "  - https://doc.rust-lang.org/nightly/nightly-rustc/rustc_target/spec/struct.TargetOptions.html"
   ],
-  "llvm-target": "x86_64-unknown-none",
-  "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
   "arch": "x86_64",
+  "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
+  "disable-redzone": true,
+  "executables": true,
+  "features": "+soft-float,-sse,-mmx,-avx,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-avx2,-fma,-3dnow,-3dnowa",
+  "linker": "rust-lld",
+  "linker-flavor": "ld.lld",
+  "llvm-target": "x86_64-unknown-none",
+  "target-c-int-width": "32",
   "target-endian": "little",
   "target-pointer-width": "64",
-  "target-c-int-width": "32",
   "os": "none",
-  "executables": true,
-  "linker-flavor": "ld.lld",
-  "linker": "rust-lld",
   "panic-strategy": "abort",
-  "disable-redzone": true,
-  "features": "+soft-float,-sse,-mmx,-avx,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-avx2,-fma,-3dnow,-3dnowa"
+  "_comment2": [
+    "add 'GNU ld' linker args here"
+  ],
+  "pre-link-args": {
+    "ld.lld": [
+      "-n",
+      "-T",
+      "./link.ld"
+    ]
+  },
+  "relocation-model": "pic"
 }

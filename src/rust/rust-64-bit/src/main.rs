@@ -2,6 +2,7 @@
 //   1) the minimal Rust runtime is not there (similar to crt0 for C programs)
 //   2) we write Kernel code, but standard lib makes syscalls and is meant for userland programs
 #![no_std]
+#![no_main]
 // enable inline assembly (new, modern asm, not legacy llvm_asm)
 #![feature(asm)]
 
@@ -16,6 +17,14 @@
 
 // required to access ".message()" on PanicInfo
 #![feature(panic_info_message)]
+
+// required to include "global assembler", i.e. include
+// "object files by assembly source"
+// it will compile these as GAS (GNU Assembly)
+#![feature(global_asm)]
+
+global_asm!(include_str!("start.S"));
+global_asm!(include_str!("multiboot2_header.S"));
 
 // ONLY USE ALLOCATIONS WHEN AN ALLOCATOR WAS SET UP!
 #[macro_use]

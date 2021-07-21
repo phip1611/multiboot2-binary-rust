@@ -19,8 +19,7 @@ RUST_64_BIT_BIN="src/rust/rust-64-bit/target/x86_64-none-bare_metal/debug/librus
 function fn_main() {
   ./src/rust/build.sh
   fn_prepare_build_dir
-  fn_compile_nasm
-  fn_link_final_elf
+  fn_copy_bin
   fn_test_grub_multiboot2
 }
 
@@ -29,28 +28,12 @@ function fn_prepare_build_dir() {
   mkdir -p "${BUILD_DIR}"
 }
 
-# compiles all assembler files
-function fn_compile_nasm() {
-  # btw: for multiboot2_header.asm it's irrelevant, whether it is compiled as elf32 or elf64 (it doesn't contain code)
-  nasm -f elf64 "src/multiboot2_header.asm" -o "${BUILD_DIR}/multiboot2_header.o"
-  nasm -f elf64 "src/start.asm" -o "${BUILD_DIR}/start.o"
-}
-
-
-# Builds the final ELF64-x86_64, that is multiboot2-compatible and contains
-# the code from all object files using GNU ld.
-function fn_link_final_elf() {
-  # Link all object files together using the linker script.
-  ld -n \
-    -o "$FINAL_ELF" \
-    -T "src/linker.ld" \
-    -m elf_x86_64 \
-    "${BUILD_DIR}/multiboot2_header.o" \
-    "${BUILD_DIR}/start.o" \
-    "${RUST_64_BIT_BIN}"
-
-  # btw: valid options for "-m" can be found via "ld --verbose"
-  # e.g.   elf_x86_64, elf32_x86_64, elf_i386, ...
+function fn_copy_bin() {
+  # symlink doesn't work, when GRUB makes a standalone image
+  # ln -s "$(pwd)/src/rust/rust-64-bit/target/x86_64-none-bare_metal/debug/rust-multiboot2-64-bit-kernel" \
+  # "${BUILD_DIR}/multiboot2-binary.elf"
+  cp "$(pwd)/src/rust/rust-64-bit/target/x86_64-none-bare_metal/debug/rust-multiboot2-64-bit-kernel" \
+   "${BUILD_DIR}/multiboot2-binary.elf"
 }
 
 function fn_test_grub_multiboot2 {

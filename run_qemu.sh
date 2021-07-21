@@ -47,7 +47,7 @@ fn_start_qemu() {
           "-machine"
           # "q35" # also works, but slower
           # Interesting to see how this changes CPU-ID
-          # Without KVM the Hypervisor is QEMU, else its KVM
+          # Without KVM the Hypervisor is QEMU, else it's KVM
           "q35,accel=kvm:tcg"
 
           # Allocate some memory
@@ -93,7 +93,7 @@ fn_start_qemu() {
 fn_prepare_grub_installation() {
   mkdir -p "${QEMU_VOLUME_DIR}/EFI/BOOT"
   # create a standalone GRUB installation for x86_64-efi platform in a local directory
-  # UEFI spec: BOOT/EFI/BOOTX64.EFI will be automatically bootet
+  # UEFI spec: BOOT/EFI/BOOTX64.EFI will be automatically booted
   #
   grub-mkstandalone -O x86_64-efi -o "${QEMU_VOLUME_DIR}/EFI/BOOT/BOOTX64.EFI" \
       "/boot/grub/grub.cfg=${QEMU_DIR}/grub.cfg" \
