@@ -9,21 +9,28 @@ ENTRY(start)
 
 SECTIONS {
 
-    /* Not relevant anymore, because our binary gets relocated by GRUB
-       and has PIC. */
-    . = 0M;
+    /* 8MiB works in QEMU and two of my personal computers. Anyhow, it is insane
+       to rely on static addresses, because each UEFI implementations may rely on
+       other addresses being available. Eventually we will have to fix
+       the relocation problem.
+       */
+    . = 8M;
 
     /* Multiboot2-Header must be 64-bit (8 byte) aligned according to spec. */
     . = ALIGN(8);
 
-    .text :
+    /* this fails because of: https://stackoverflow.com/questions/68475415/ */
+    /*.multiboot2_header :
     {
+
+    }*/
+
+    .text . :
+    {
+        /* temporary workaround https://stackoverflow.com/questions/68475415/ */
         *(.multiboot2_header)
         *(.text .text.*)
     }
-
-    /* Julian Stecklina (@blitzclone) told me that the GNU linker also adds a lot of other
-       sections automatically when it thinks they are useful, e.g. debug sections and .bss */
 
     .rodata :
     {

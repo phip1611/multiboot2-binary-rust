@@ -21,36 +21,25 @@
         #   ebx: pointer to Multiboot2 information structure
         #
         # first argument is edi, second is esi => SYSTEM V x86_64 calling convention
+        mov     rdi, 0
+        mov     rsi, 0
         mov     edi, eax
         mov     esi, ebx
-
-
-
-        # Loads the link time address into rcx
-        lea     rcx, [start]
-        # Loads the real address of start into rdx
-        lea     rdx, [rip - start]
-        # the relative runtime offset
-        sub     rdx, rcx
-
-
 
         # Set stack top (stack grows downwards, from high to low address).
         # GRUB already used the stack provided by the UEFI firmware and
         # Multiboot2 spec also says, application needs to set it's own stack.
-        mov     rax, _initial_stack_top
-        # add offset
-        add     rax, rcx
-        mov     rsp, rax
-        mov     rbp, rax
+        mov     rsp, 0
+        mov     rbp, 0
+        # OFFSET in intel syntax is similar to $ in AT&T syntax
+        # This way we get the symbol address as immediate in assembly output
+        # https://stackoverflow.com/questions/39355188/
+        # This is different to nasm, where the symbol address would be used
+        # by default as immediate.
+        mov     esp, OFFSET _initial_stack_top
+        mov     ebp, OFFSET _initial_stack_top
 
-
-
-        # rcx contains the runtime address of the entry into Rust after this lne
-        lea     rcx, [entry_64_bit + rdx]
-        jmp     rcx
-
-
+        jmp     entry_64_bit
 
         # here we should only land if some error occurs
         cli     # clear interrupts, otherwise the hlt will not work
@@ -60,10 +49,10 @@
 .section .bss
 
     # reserve 128 KiB as stack (no stack overflow protection so far!)
-    # when we use "resb" (reserve bytes), the memory grows upwards
-    #
-    # We later drop this memory area as stack if we fully manage the memory in our kernel
+    .ALIGN 16
     _initial_stack_bottom:
-        .fill 0x20000
+        # implicitly fills zeroes
+        # https://ftp.gnu.org/old-gnu/Manuals/gas-2.9.1/html_chapter/as_7.html#SEC91
+        .FILL 0x20000
     _initial_stack_top:
 

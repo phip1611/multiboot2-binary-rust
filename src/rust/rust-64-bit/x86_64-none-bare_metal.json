@@ -67,6 +67,5 @@
       "-T",
       "./link.ld"
     ]
-  },
-  "relocation-model": "pic"
+  }
 }
