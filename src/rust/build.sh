@@ -31,9 +31,7 @@ done
 
 
 BINS=(
-    # currently unused
-    # "rust-32-bit"
-    "rust-64-bit"
+    "rust-kernel"
 )
 
 for BIN in "${BINS[@]}"
