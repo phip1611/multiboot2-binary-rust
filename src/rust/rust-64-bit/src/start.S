@@ -26,20 +26,38 @@
         mov     edi, eax
         mov     esi, ebx
 
+
+        # Loads the link time address into rcx
+            # OFFSET in intel syntax is similar to $ in AT&T syntax
+            # This way we get the symbol address as immediate in assembly output
+            # https://stackoverflow.com/questions/39355188/
+            # This is different to nasm, where the symbol address would be used
+            # by default as immediate.
+        mov     rcx, OFFSET start
+        # Loads the real address of start into rdx
+        #  results in "-0x20(%rip)"
+        lea     rdx, [rip - start]
+        # rdx, the relative runtime offset
+        # example: link addr = 8MiB
+        #          real addr = 1MiB
+        #          offset    = 1MiB - 8MiB = -7MiB
+        # => we need to add "-7MiB" (the offset in rdx) to every static/old/invalid address next
+        sub     rdx, rcx
+
         # Set stack top (stack grows downwards, from high to low address).
         # GRUB already used the stack provided by the UEFI firmware and
         # Multiboot2 spec also says, application needs to set it's own stack.
-        mov     rsp, 0
-        mov     rbp, 0
-        # OFFSET in intel syntax is similar to $ in AT&T syntax
-        # This way we get the symbol address as immediate in assembly output
-        # https://stackoverflow.com/questions/39355188/
-        # This is different to nasm, where the symbol address would be used
-        # by default as immediate.
-        mov     esp, OFFSET _initial_stack_top
-        mov     ebp, OFFSET _initial_stack_top
 
-        jmp     entry_64_bit
+            # relocate stack top
+        mov     rax, OFFSET _initial_stack_top
+        add     rax, rdx
+        mov     rsp, rax
+        mov     rbp, rax
+            # relocate rust entry
+        mov     rax, OFFSET entry_64_bit
+        add     rax, rdx
+
+        jmp     rax
 
         # here we should only land if some error occurs
         cli     # clear interrupts, otherwise the hlt will not work

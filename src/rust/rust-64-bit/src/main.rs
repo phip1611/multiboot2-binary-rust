@@ -64,6 +64,11 @@ use crate::sysinfo::SysInfo;
 ///
 #[no_mangle]
 fn entry_64_bit(eax: u32, ebx: u32) -> ! {
+
+    /*unsafe {
+        asm!("mov r14, 0xdeadbeefdeadbeef", "cli", "hlt");
+    }*/
+
     // Make sure all "BootStageAware"-compatible structs get their right initial state
     BootStage::S0_Initial.enter(&|| {
         // MUST BE EMPTY, because everything must get in init state first (e.g. QEMU logger)
