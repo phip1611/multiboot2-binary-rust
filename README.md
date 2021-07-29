@@ -8,7 +8,7 @@ and `UEFI` as firmware environment.
 
 ![Rust Kernel QEMU Screenshot](./doc/figures/rust-kernel-qemu-screenshot.png "Rust Kernel QEMU Screenshot")
 *Screenshot from our kernel running in QEMU. It can fetch some information about it's environment
-and print it to the screen.*
+and print it to the screen. If you boot it on your private computer, it would look similar.*
 
 
 Although this project could be developed to a fully functional (micro)kernel, this is out of scope of this prototype. It is 
