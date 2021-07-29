@@ -6,7 +6,12 @@ to do with "multiple OS boot environments"! The binary gets packaged as an `ELF6
 by `GRUB` [[0]], a`multiboot2`-compliant bootloader. The demo project focuses on the **x86_64** processor architecture 
 and `UEFI` as firmware environment.
 
-Although this could be developed to a fully functional (micro)kernel, this is out of scope of this prototype. It is 
+![Rust Kernel QEMU Screenshot](./doc/figures/rust-kernel-qemu-screenshot.png "Rust Kernel QEMU Screenshot")
+*Screenshot from our kernel running in QEMU. It can fetch some information about it's environment
+and print it to the screen.*
+
+
+Although this project could be developed to a fully functional (micro)kernel, this is out of scope of this prototype. It is 
 limited to fetch data from `UEFI` firmware and `cpuid` and logging this information to the screen. The main goals 
 were to figure out how such a setup could look like and how we could keep developer experience and productivity high. 
 For example, to achieve the latter, this repository contains an easy mechanism to start it in `QEMU`.
