@@ -1,10 +1,9 @@
 /*
- * This linker script is used to assemble the ELF-file from cargos build with the ELF-object-file
- * from the compilation of `multiboot2_header.asm` into one single multiboot2-compatible ELF-file.
- * This "final ELF-file" can later be our Rust kernel, an OS-specific bootloader or another bootmanager.
+ * Custom linker script for the `cargo` build.
+ * Makes sure the multiboot2-header is at the beginning of the file.
  */
 
-/** The "start"-symbol from start.asm. */
+/** The "start"-symbol from start.S. */
 ENTRY(start)
 
 SECTIONS {

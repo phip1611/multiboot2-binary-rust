@@ -39,10 +39,6 @@
             # Address to jump to.
             #  GRUB source code: https://github.com/rhboot/grub2/blob/a53e530f8ad3770c3b03c208c08ae4162f68e3b1/grub-core/loader/multiboot_mbi2.c#L212
             # According to MB2 spec, this has a higher precedence, than the regular start-symbol from the ELF.
-            # - https://stackoverflow.com/questions/36007975/compile-error-relocation-r-x86-64-pc32-against-undefined-symbol
-            # - https://www.nasm.us/xdoc/2.10rc8/html/nasmdoc9.html#section-9.2.5
-            # plt: prodecure linkage table
-            # - https://reverseengineering.stackexchange.com/questions/1992/what-is-plt-got
             .LONG  start   # entry_addr (32bit)
         .Lmb2_header_tag_efiamd64_end:
         # ------------------------------------------------------------------------------------

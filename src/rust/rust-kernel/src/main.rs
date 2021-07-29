@@ -54,14 +54,8 @@ use uefi::table::runtime::ResetType;
 use crate::sysinfo::SysInfo;
 // use uefi::proto::console::text::Color;
 
-/// This symbol is referenced in "start.asm". It doesn't need the "pub"-keyword,
+/// This symbol is referenced in "start.S". It doesn't need the "pub"-keyword,
 /// because visibility is a Rust feature and not important for the object file.
-///
-///
-/// When this gets executed, we are definitely in a multiboot2 environment.
-/// This is checked in the assembly. After many attempts, I decided against doing
-/// this in Rust, because `eax` was always overwritten, before the initial read.
-///
 #[no_mangle]
 fn entry_64_bit(eax: u32, ebx: u32) -> ! {
     // Make sure all "BootStageAware"-compatible structs get their right initial state
