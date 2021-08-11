@@ -69,7 +69,7 @@ fn entry_64_bit(eax: u32, ebx: u32) -> ! {
             panic_error!(BootError::Multiboot2MagicWrong, "multiboot2 magic invalid, abort boot!");
         }
 
-        let mb2_boot_info: Multiboot2Info = unsafe { multiboot2::load(ebx as usize) };
+        let mb2_boot_info: Multiboot2Info = unsafe { multiboot2::load(ebx as usize) }.expect("Couldn't load MBI");
 
         let lock = MULTIBOOT2_INFO_STRUCTURE.get_mut();
         lock.replace(mb2_boot_info)
@@ -102,14 +102,13 @@ fn entry_64_bit(eax: u32, ebx: u32) -> ! {
     // ############################################################################################
     BootStage::S3_UEFIRuntimeServices.enter(&|| {
         log::info!("Entered UEFI boot service stage");
-        log::info!("{:#?}", MULTIBOOT2_INFO_STRUCTURE.get().as_ref().unwrap());
         let uefi_st_bs = UEFI_ST_BS.get().as_ref().unwrap();
         // log::info!("UEFI System Table (Boot Services enabled):\n{:#?}", uefi_st_bs);
 
         if runs_inside_qemu::runs_inside_qemu() {
-            log::info!("We run inside QEMU :)");
+            //log::info!("We run inside QEMU :)");
         } else {
-            log::info!("We don't run in QEMU :O");
+            //log::info!("We don't run in QEMU :O");
         }
 
         // test heap allocation works

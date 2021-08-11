@@ -54,9 +54,9 @@ dependencies = [
 
 [[package]]
 name = "multiboot2"
-version = "0.11.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52c87391fd08315d11b5ddf2fad7106f6384495a3609aa1b315b73158616dbf3"
+checksum = "5809e17a554c6dd50643b2b39e8bf9738d595eb5cddcf4f233ce643faffa217b"
 dependencies = [
  "bitflags",
 ]
@@ -89,13 +89,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "runs_inside_qemu"
-version = "1.0.2"
+name = "raw-cpuid"
+version = "10.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90f18c024a281b36f656c1616df70b2ada30df218aa4351763b79f406b3d5f2f"
+checksum = "929f54e29691d4e6a9cc558479de70db7aa3d98cd6fe7ab86d7507aa2886b9d2"
+dependencies = [
+ "bitflags",
+]
+
+[[package]]
+name = "runs_inside_qemu"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "852efc32feb185f62437065b7647fe6134d493bef2042559210f66bb59becedd"
 dependencies = [
  "log",
- "raw-cpuid",
+ "raw-cpuid 10.2.0",
 ]
 
 [[package]]
@@ -180,7 +189,7 @@ checksum = "702d51a8a099ea6b47826796377591d2ed47116c7f0454f0d08d1d9872944880"
 dependencies = [
  "bit_field 0.10.1",
  "bitflags",
- "raw-cpuid",
+ "raw-cpuid 9.1.0",
 ]
 
 [[package]]

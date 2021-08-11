@@ -19,12 +19,12 @@ uefi = { version = "0.11.0", features = ["logger"] }
 # uefi = { features = ["logger"], path = "../../../../uefi-rs" }
 log = "0.4.14"
 x86_64 = "0.14.3"
-multiboot2 = "0.11.0"
+multiboot2 = "0.12.1"
 # multiboot2 = { path = "../../../../multiboot2-elf64" }
 utils = { path = "../rust-utils" }
 # useage as arrays but on stack; required to use core::fmt conveniently
 arrayvec = { version = "0.7.1", default-features = false }
 # derive Display, which will make printing of enum variants convenient
 derive_more = { version = "0.99.14", default-features = false, features = ["display"] }
-runs_inside_qemu = "1.0.2"
+runs_inside_qemu = "1.0.3"
 # runs_inside_qemu = { path = "../../../../runs-inside-qemu" }
