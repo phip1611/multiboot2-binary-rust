@@ -42,6 +42,10 @@ fn_start_qemu() {
           "-vga"
           "std"
 
+          # breaks "runs_inside_qemu()"-detection, changes CPUID
+          # "-cpu"
+          # "host"
+
           # Use a modern machine, with acceleration if possible.
           "-machine"
           # "q35" # also works, but slower
