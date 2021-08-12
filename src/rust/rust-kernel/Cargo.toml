@@ -12,7 +12,7 @@ publish = false
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-x86 = "0.40.0"
+x86 = "0.41.0"
 # raw-cpuid = { path = "../../../../rust-cpuid" }
 # raw-cpuid = "9.1.1" # as long as x86 crate references old version
 uefi = { version = "0.11.0", features = ["logger"] }

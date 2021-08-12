@@ -1,12 +1,12 @@
 //! This is called "xuefi" in order to have no name conflict with "uefi" crate.
 
-use uefi::table::{SystemTable, Boot, Runtime};
+use core::alloc::{GlobalAlloc, Layout};
+use core::ptr;
+use uefi::table::boot::{BootServices, MemoryType};
+use uefi::table::{Boot, Runtime, SystemTable};
+use uefi::ResultExt;
 use utils::fakelock::FakeLock;
 use utils::mutex::SimpleMutex;
-use core::alloc::{Layout, GlobalAlloc};
-use uefi::table::boot::{MemoryType, BootServices};
-use core::ptr;
-use uefi::ResultExt;
 
 /// Stores the reference to the UEFI system table (with boot services enabled).
 /// This uses a [`FakeLock`] because when we have boot services available, we one
@@ -18,6 +18,7 @@ pub static UEFI_ST_BS: FakeLock<Option<SystemTable<Boot>>> = FakeLock::new(None)
 /// This uses a [`SimpleMutex`] because eventually we will have multiple cores.
 /// Technically, this is just a convenient Rust language feature. The pointer will be
 /// the same as for [`UEFI_ST_BS`].
+#[allow(unused)]
 pub static UEFI_ST_RS: SimpleMutex<Option<SystemTable<Runtime>>> = SimpleMutex::new(None);
 
 /// A shameless copy of the allocator in [`uefi::alloc`]. Allocator while the
@@ -26,13 +27,9 @@ pub struct UefiBsAllocator;
 
 impl UefiBsAllocator {
     fn boot_services(&self) -> &BootServices {
-        UEFI_ST_BS.get()
-            .as_ref()
-            .unwrap()
-            .boot_services()
+        UEFI_ST_BS.get().as_ref().unwrap().boot_services()
     }
 }
-
 
 unsafe impl GlobalAlloc for UefiBsAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
@@ -42,7 +39,8 @@ unsafe impl GlobalAlloc for UefiBsAllocator {
 
         if align > 8 {
             // allocate more space for alignment
-            let ptr = if let Ok(ptr) = self.boot_services()
+            let ptr = if let Ok(ptr) = self
+                .boot_services()
                 .allocate_pool(mem_ty, size + align)
                 .warning_as_error()
             {

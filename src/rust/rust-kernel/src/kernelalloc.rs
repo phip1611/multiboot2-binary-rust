@@ -1,8 +1,8 @@
-use core::alloc::{GlobalAlloc, Layout};
-use crate::boot_stage::{BootStageAware, BootStage};
-use crate::xuefi::UefiBsAllocator;
-use utils::fakelock::FakeLock;
+use crate::boot_stage::{BootStage, BootStageAware};
 use crate::error::BootError;
+use crate::xuefi::UefiBsAllocator;
+use core::alloc::{GlobalAlloc, Layout};
+use utils::fakelock::FakeLock;
 
 #[global_allocator]
 pub static ALLOCATOR: BootStageAwareAllocator = BootStageAwareAllocator::new();
@@ -43,7 +43,11 @@ unsafe impl GlobalAlloc for BootStageAwareAllocator {
         if let Some(a) = self.uefi_bs_allocator.get() {
             a.alloc(layout)
         } else {
-            panic_error!(BootError::PanicAlloc, "No Allocator for alloc; layout={:#?}", layout);
+            panic_error!(
+                BootError::PanicAlloc,
+                "No Allocator for alloc; layout={:#?}",
+                layout
+            );
         }
     }
 
@@ -51,7 +55,11 @@ unsafe impl GlobalAlloc for BootStageAwareAllocator {
         if let Some(a) = self.uefi_bs_allocator.get() {
             a.dealloc(ptr, layout)
         } else {
-            panic_error!(BootError::PanicDealloc, "No Allocator for dealloc; layout={:#?}", layout);
+            panic_error!(
+                BootError::PanicDealloc,
+                "No Allocator for dealloc; layout={:#?}",
+                layout
+            );
         }
     }
 }

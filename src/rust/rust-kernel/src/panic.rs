@@ -1,8 +1,8 @@
-use crate::boot_stage::{BootStageAware, BootStage};
-use core::panic::PanicInfo;
-use crate::error::{BootError};
+use crate::boot_stage::{BootStage, BootStageAware};
+use crate::error::BootError;
 use core::fmt::Write;
-use core::sync::atomic::{Ordering};
+use core::panic::PanicInfo;
+use core::sync::atomic::Ordering;
 use utils::mutex::SimpleMutex;
 
 /// Global single instance of [`BootStageAwarePanicHandler`].
@@ -38,29 +38,29 @@ pub struct BootStageAwarePanicHandler {
 }
 
 impl BootStageAwarePanicHandler {
-
     const fn new() -> Self {
         Self {
-            panic_error_code: SimpleMutex::new(None)
+            panic_error_code: SimpleMutex::new(None),
         }
     }
 
-
-
     /// Creates a stack allocated formatted error message from a panic info.
-    fn generate_panic_msg(&self, info: &PanicInfo) -> arrayvec::ArrayString::<1024> {
+    fn generate_panic_msg(&self, info: &PanicInfo) -> arrayvec::ArrayString<1024> {
         let mut buf = arrayvec::ArrayString::<1024>::new();
         // if this is an error, we ignore it. It would most probably mean, that the message
         // was only created partly.
         let _ = writeln!(
             &mut buf,
             "PANIC in {}@{}:{}: {:#?}",
-            info.location().map(|l| l.file()).unwrap_or("<Unknown File>"),
+            info.location()
+                .map(|l| l.file())
+                .unwrap_or("<Unknown File>"),
             info.location().map(|l| l.line()).unwrap_or(0),
             info.location().map(|l| l.column()).unwrap_or(0),
             info.message().unwrap_or(&format_args!("")),
             // info.payload(),
-        ).unwrap();
+        )
+        .unwrap();
         buf
     }
 
@@ -78,8 +78,8 @@ impl BootStageAwarePanicHandler {
             let lock = self.panic_error_code.lock();
             let error_code = lock.unwrap_or(BootError::PanicGeneric);
 
-            /// Uses the `r15` register of the boot processor (BP) to signal the specific [`BootError`].
-            /// This is useful, if our panic handler itself fails for example with printing an error.
+            // Uses the `r15` register of the boot processor (BP) to signal the specific [`BootError`].
+            // This is useful, if our panic handler itself fails for example with printing an error.
             unsafe { asm!("mov r15, {0}", in(reg) error_code.code()) };
         }
 
@@ -87,7 +87,6 @@ impl BootStageAwarePanicHandler {
         let msg = self.generate_panic_msg(info);
         // the logger implementation will log this to an appropriate place
         log::error!("{}", msg);
-
 
         // After a panic in the Rust kernel, we do not recover in any way
         // Game Over :)

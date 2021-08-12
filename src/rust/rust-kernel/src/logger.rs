@@ -1,11 +1,11 @@
-use utils::mutex::SimpleMutex;
-use crate::qemu_debug::{QemuDebugLogger};
-use log::{Log, Metadata, Record, LevelFilter};
-use uefi::logger::Logger as UefiLogger;
 use crate::boot_stage::{BootStage, BootStageAware};
-use utils::fakelock::FakeLock;
+use crate::qemu_debug::QemuDebugLogger;
 use crate::xuefi::UEFI_ST_BS;
+use log::{LevelFilter, Log, Metadata, Record};
 use runs_inside_qemu::runs_inside_qemu;
+use uefi::logger::Logger as UefiLogger;
+use utils::fakelock::FakeLock;
+use utils::mutex::SimpleMutex;
 
 /// Public single static logger instance. This must be global+static, because
 /// that's the only way we can attach this logger to [`log::set_logger`] in `no_std` environments.
@@ -49,9 +49,11 @@ impl BootStageAwareLogger {
         lock.replace(logger);
     }
 
+    #[allow(unused)]
     pub fn disable_qemu_debug_port_logger(&self) {
         let mut lock = self.qemu_debug_port.lock();
-        lock.take().expect("You can only disable the logger if it is enabled!");
+        lock.take()
+            .expect("You can only disable the logger if it is enabled!");
     }
 
     pub fn enable_uefi_console_logger(&self) {
@@ -64,7 +66,8 @@ impl BootStageAwareLogger {
 
     pub fn disable_uefi_console_logger(&self) {
         let lock = self.uefi_console.get_mut();
-        lock.take().expect("You can only disable the logger if it is enabled!");
+        lock.take()
+            .expect("You can only disable the logger if it is enabled!");
     }
 }
 
@@ -77,7 +80,6 @@ impl Log for BootStageAwareLogger {
     }
 
     fn log(&self, record: &Record) {
-
         self.apply_to_each(&|l| l.log(record));
     }
 
@@ -101,12 +103,11 @@ impl BootStageAware for BootStageAwareLogger {
                 // enable this once if in QEMU and leave it on the whole time
                 log::set_logger(&LOGGER).expect("Should be called once!");
             }
-            BootStage::S1_MB2Handoff => {
-            }
+            BootStage::S1_MB2Handoff => {}
             // Also log to UEFI console.
             BootStage::S2_UEFIBootServices => {
                 self.enable_uefi_console_logger();
-            },
+            }
             // Stop logging to UEFI console, since it isn't available anymore.
             BootStage::S3_UEFIRuntimeServices => {
                 self.disable_uefi_console_logger();

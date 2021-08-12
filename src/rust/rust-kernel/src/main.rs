@@ -5,19 +5,15 @@
 #![no_main]
 // enable inline assembly (new, modern asm, not legacy llvm_asm)
 #![feature(asm)]
-
 // see https://docs.rust-embedded.org/embedonomicon/smallest-no-std.html
 #![feature(lang_items)]
-
 // to use custom allocator
 // #![feature(default_alloc_error_handler)]
 // default_alloc_error_handler makes links errors ("rust_oom not found")
 // We just use our own/custom error handler.
 #![feature(alloc_error_handler)]
-
 // required to access ".message()" on PanicInfo
 #![feature(panic_info_message)]
-
 // required to include "global assembler", i.e. include
 // "object files by assembly source"
 // it will compile these as GAS (GNU Assembly)
@@ -27,6 +23,7 @@ global_asm!(include_str!("start.S"));
 global_asm!(include_str!("multiboot2_header.S"));
 
 // ONLY USE ALLOCATIONS WHEN AN ALLOCATOR WAS SET UP!
+#[allow(unused)]
 #[macro_use]
 extern crate alloc;
 
@@ -34,24 +31,22 @@ extern crate alloc;
 #[macro_use]
 mod panic;
 
-mod error;
-mod qemu_debug;
 mod boot_stage;
-mod logger;
-mod xuefi;
+mod error;
 mod kernelalloc;
+mod logger;
 mod mb2;
+mod qemu_debug;
 mod sysinfo;
+mod xuefi;
 
-use uefi::prelude::{SystemTable, Boot};
 use crate::boot_stage::BootStage;
-use crate::xuefi::UEFI_ST_BS;
 use crate::error::BootError;
-use multiboot2::BootInformation as Multiboot2Info;
 use crate::mb2::MULTIBOOT2_INFO_STRUCTURE;
-use uefi::{Event, Status};
-use uefi::table::runtime::ResetType;
 use crate::sysinfo::SysInfo;
+use crate::xuefi::UEFI_ST_BS;
+use multiboot2::BootInformation as Multiboot2Info;
+use uefi::prelude::{Boot, SystemTable};
 // use uefi::proto::console::text::Color;
 
 /// This symbol is referenced in "start.S". It doesn't need the "pub"-keyword,
@@ -66,29 +61,37 @@ fn entry_64_bit(eax: u32, ebx: u32) -> ! {
     BootStage::S1_MB2Handoff.enter(&|| {
         const MULTIBOOT2_MAGIC: u32 = 0x36d76289;
         if eax != MULTIBOOT2_MAGIC {
-            panic_error!(BootError::Multiboot2MagicWrong, "multiboot2 magic invalid, abort boot!");
+            panic_error!(
+                BootError::Multiboot2MagicWrong,
+                "multiboot2 magic invalid, abort boot!"
+            );
         }
 
-        let mb2_boot_info: Multiboot2Info = unsafe { multiboot2::load(ebx as usize) }.expect("Couldn't load MBI");
+        let mb2_boot_info: Multiboot2Info =
+            unsafe { multiboot2::load(ebx as usize) }.expect("Couldn't load MBI");
 
         let lock = MULTIBOOT2_INFO_STRUCTURE.get_mut();
         lock.replace(mb2_boot_info)
     });
     // ############################################################################################
-    BootStage::S2_UEFIBootServices.enter(& || {
+    BootStage::S2_UEFIBootServices.enter(&|| {
         let mb2_boot_info = MULTIBOOT2_INFO_STRUCTURE.get().as_ref().unwrap();
         let uefi_system_table = mb2_boot_info.efi_sdt_64_tag();
         if uefi_system_table.is_none() {
-            panic_error!(BootError::PanicMBISUefiSystemTableMissing, "UEFI System table is not present!");
+            panic_error!(
+                BootError::PanicMBISUefiSystemTableMissing,
+                "UEFI System table is not present!"
+            );
         }
         let uefi_system_table = uefi_system_table.unwrap();
 
         // It's important that we "own" the system table here and not have a pointer to it.
         // Otherwise there would be a double-dereference which causes errors.
-        let mut uefi_system_table: SystemTable<Boot> = unsafe { core::mem::transmute( uefi_system_table.sdt_address()) };
+        let uefi_system_table: SystemTable<Boot> =
+            unsafe { core::mem::transmute(uefi_system_table.sdt_address()) };
 
         // prepare screen
-        uefi_system_table.stdout().clear().unwrap();
+        uefi_system_table.stdout().clear().unwrap().unwrap();
         /*uefi_system_table.stdout().set_color(
             Color::Yellow,
             Color::Black,
@@ -110,6 +113,19 @@ fn entry_64_bit(eax: u32, ebx: u32) -> ! {
         } else {
             //log::info!("We don't run in QEMU :O");
         }
+
+        let sysinfo = SysInfo::new(uefi_st_bs, &x86::cpuid::CpuId::new());
+        log::debug!("CPU: {:#?}", sysinfo.cpu_info().extended_brand_string());
+        log::debug!(
+            "Caches: {:#?}",
+            sysinfo
+                .cpu_info()
+                .cache_descriptions()
+                .iter()
+                .filter(|x| x.is_some())
+                .map(|x| x.unwrap())
+                .collect::<alloc::vec::Vec<_>>()
+        );
 
         // test heap allocation works
         /*let mut vec = vec![1, 2, 3];

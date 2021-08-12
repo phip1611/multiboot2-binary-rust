@@ -1,10 +1,7 @@
-use multiboot2::{BootInformation, EFIMemoryDesc, EFIMemoryAreaType};
-use utils::convert::bytes_to_hex_ascii;
-use uefi::{CStr16, Char16};
-use uefi::prelude::{SystemTable, Boot};
-use log::{Metadata, Record};
-use core::fmt::Write;
 use crate::error::BootError;
+use core::fmt::Write;
+use log::{Metadata, Record};
+use uefi::{CStr16, Char16};
 
 /// Implementation of a logger for the [`log`] crate, that writes everything to
 /// QEMUs "debugcon" feature, i.e. x86 i/o-port 0xe9.
@@ -34,7 +31,12 @@ impl log::Log for QemuDebugLogger {
         );
         if let Err(e) = res {
             let mut buf = arrayvec::ArrayString::<256>::new();
-            let _ = write!(buf, "QemuDebugLoggerError({}): {}", BootError::StackArrayTooSmall, e);
+            let _ = write!(
+                buf,
+                "QemuDebugLoggerError({}): {}",
+                BootError::StackArrayTooSmall,
+                e
+            );
             qemu_debug_stdout_str("QemuDebugLogger: ");
             qemu_debug_stdout_str(buf.as_str());
             qemu_debug_stdout_str("\n");
@@ -43,22 +45,20 @@ impl log::Log for QemuDebugLogger {
 
         // in any way, write the string as far as it was formatted (even if it failed in the middle)
         qemu_debug_stdout_str(buf.as_str());
-
     }
 
-    fn flush(&self) {
-    }
+    fn flush(&self) {}
 }
 
 pub fn qemu_debug_stdout_str(msg: &str) {
     qemu_debug_stdout_u8_arr(msg.as_bytes());
 }
 
+#[allow(unused)]
 pub fn qemu_debug_stdout_c16str(msg: &CStr16) {
-    msg.iter()
-        .for_each(|c: &Char16| {
-            let val: u16 = (*c).into();
-            qemu_debug_stdout_u8_arr(&val.to_be_bytes());
+    msg.iter().for_each(|c: &Char16| {
+        let val: u16 = (*c).into();
+        qemu_debug_stdout_u8_arr(&val.to_be_bytes());
     });
 }
 
@@ -69,7 +69,7 @@ pub fn qemu_debug_stdout_u8_arr(bytes: &[u8]) {
         unsafe { x86::io::outb(0xe9, *byte) };
     }
 }
-
+#[allow(unused)]
 pub fn qemu_debug_stdout_char_arr(chars: &[char]) {
     for char in chars {
         unsafe { x86::io::outb(0xe9, *char as u8) };

@@ -1,8 +1,8 @@
-use crate::logger::{LOGGER};
-use utils::fakelock::FakeLock;
-use derive_more::Display as DeriveMoreDisplay;
-use crate::panic::PANIC_HANDLER;
 use crate::kernelalloc::ALLOCATOR;
+use crate::logger::LOGGER;
+use crate::panic::PANIC_HANDLER;
+use derive_more::Display as DeriveMoreDisplay;
+use utils::fakelock::FakeLock;
 
 /// Knows the current [`BootStage`].
 pub static BOOT_STAGE: FakeLock<BootStage> = FakeLock::new(BootStage::S0_Initial);
@@ -33,7 +33,7 @@ pub enum BootStage {
 impl BootStage {
     pub fn enter<T, R>(&self, prepare_actions: T) -> R
     where
-        T: Fn() -> R
+        T: Fn() -> R,
     {
         let res = prepare_actions();
         self.switch_to_next_state();
@@ -43,8 +43,7 @@ impl BootStage {
     fn switch_to_next_state(&self) {
         let prev_stage = BOOT_STAGE.get_mut();
         match self {
-            BootStage::S0_Initial => {
-            }
+            BootStage::S0_Initial => {}
             BootStage::S1_MB2Handoff => {
                 if *prev_stage != BootStage::S0_Initial {
                     panic!("BootStage::UEFI can only be activated when we are in BootStage::Mb2Handoff");
