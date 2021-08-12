@@ -26,5 +26,5 @@ utils = { path = "../rust-utils" }
 arrayvec = { version = "0.7.1", default-features = false }
 # derive Display, which will make printing of enum variants convenient
 derive_more = { version = "0.99.14", default-features = false, features = ["display"] }
-runs_inside_qemu = "1.0.3"
+runs_inside_qemu = "1.0.4"
 # runs_inside_qemu = { path = "../../../../runs-inside-qemu" }

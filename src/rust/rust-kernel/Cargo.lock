@@ -99,9 +99,9 @@ dependencies = [
 
 [[package]]
 name = "runs_inside_qemu"
-version = "1.0.3"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "852efc32feb185f62437065b7647fe6134d493bef2042559210f66bb59becedd"
+checksum = "335755c3a8693d763be5ec2691b0d99e0fba1942e3f0ab2f99ae0a688ea5670c"
 dependencies = [
  "log",
  "raw-cpuid 10.2.0",
