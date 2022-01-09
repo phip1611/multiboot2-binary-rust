@@ -3,8 +3,6 @@
 //   2) we write Kernel code, but standard lib makes syscalls and is meant for userland programs
 #![no_std]
 #![no_main]
-// enable inline assembly (new, modern asm, not legacy llvm_asm)
-#![feature(asm)]
 // see https://docs.rust-embedded.org/embedonomicon/smallest-no-std.html
 #![feature(lang_items)]
 // to use custom allocator
@@ -14,13 +12,10 @@
 #![feature(alloc_error_handler)]
 // required to access ".message()" on PanicInfo
 #![feature(panic_info_message)]
-// required to include "global assembler", i.e. include
-// "object files by assembly source"
-// it will compile these as GAS (GNU Assembly)
-#![feature(global_asm)]
 
-global_asm!(include_str!("start.S"));
-global_asm!(include_str!("multiboot2_header.S"));
+
+core::arch::global_asm!(include_str!("start.S"));
+core::arch::global_asm!(include_str!("multiboot2_header.S"));
 
 // ONLY USE ALLOCATIONS WHEN AN ALLOCATOR WAS SET UP!
 #[allow(unused)]
@@ -87,7 +82,7 @@ fn entry_64_bit(eax: u32, ebx: u32) -> ! {
 
         // It's important that we "own" the system table here and not have a pointer to it.
         // Otherwise there would be a double-dereference which causes errors.
-        let uefi_system_table: SystemTable<Boot> =
+        let mut uefi_system_table: SystemTable<Boot> =
             unsafe { core::mem::transmute(uefi_system_table.sdt_address()) };
 
         // prepare screen
@@ -108,10 +103,10 @@ fn entry_64_bit(eax: u32, ebx: u32) -> ! {
         let uefi_st_bs = UEFI_ST_BS.get().as_ref().unwrap();
         // log::info!("UEFI System Table (Boot Services enabled):\n{:#?}", uefi_st_bs);
 
-        if runs_inside_qemu::runs_inside_qemu() {
-            //log::info!("We run inside QEMU :)");
+        if runs_inside_qemu::runs_inside_qemu().is_very_likely() {
+            log::info!("We run inside QEMU :)");
         } else {
-            //log::info!("We don't run in QEMU :O");
+            log::info!("We don't run in QEMU :O");
         }
 
         let sysinfo = SysInfo::new(uefi_st_bs, &x86::cpuid::CpuId::new());

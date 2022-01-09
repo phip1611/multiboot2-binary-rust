@@ -93,7 +93,7 @@ impl BootStageAware for BootStageAwareLogger {
         match boot_stage {
             // Logging to QEMU debug I/O port only
             BootStage::S0_Initial => {
-                if runs_inside_qemu() {
+                if runs_inside_qemu().is_very_likely() {
                     self.enable_qemu_debug_port_logger();
                 }
                 // enable all log levels, otherwise things may not printed

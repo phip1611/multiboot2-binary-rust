@@ -80,7 +80,7 @@ impl BootStageAwarePanicHandler {
 
             // Uses the `r15` register of the boot processor (BP) to signal the specific [`BootError`].
             // This is useful, if our panic handler itself fails for example with printing an error.
-            unsafe { asm!("mov r15, {0}", in(reg) error_code.code()) };
+            unsafe { core::arch::asm!("mov r15, {0}", in(reg) error_code.code()) };
         }
 
         // Make sure we print a nice error; the Logger will take care of this
@@ -92,7 +92,7 @@ impl BootStageAwarePanicHandler {
         // Game Over :)
         loop {
             // clear interrupts to prevent any more damage
-            unsafe { asm!("cli") };
+            unsafe { core::arch::asm!("cli") };
             core::sync::atomic::compiler_fence(Ordering::SeqCst);
         }
     }

@@ -12,19 +12,18 @@ publish = false
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-x86 = "0.41.0"
+x86 = "0.44.0"
 # raw-cpuid = { path = "../../../../rust-cpuid" }
 # raw-cpuid = "9.1.1" # as long as x86 crate references old version
-uefi = { version = "0.11.0", features = ["logger"] }
+uefi = { version = "0.13.0", features = ["logger"] }
 # uefi = { features = ["logger"], path = "../../../../uefi-rs" }
 log = "0.4.14"
-x86_64 = "0.14.3"
-multiboot2 = "0.12.1"
+x86_64 = "0.14.7"
+multiboot2 = "0.12.2"
 # multiboot2 = { path = "../../../../multiboot2-elf64" }
 utils = { path = "../rust-utils" }
 # useage as arrays but on stack; required to use core::fmt conveniently
-arrayvec = { version = "0.7.1", default-features = false }
+arrayvec = { version = "0.7.2", default-features = false }
 # derive Display, which will make printing of enum variants convenient
-derive_more = { version = "0.99.14", default-features = false, features = ["display"] }
-runs_inside_qemu = "1.0.4"
-# runs_inside_qemu = { path = "../../../../runs-inside-qemu" }
+derive_more = { version = "0.99.17", default-features = false, features = ["display"] }
+runs_inside_qemu = "1.2.1"

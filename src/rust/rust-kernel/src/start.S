@@ -38,8 +38,8 @@
         # https://stackoverflow.com/questions/39355188/
         # This is different to nasm, where the symbol address would be used
         # by default as immediate.
-        mov     esp, OFFSET _initial_stack_top
-        mov     ebp, OFFSET _initial_stack_top
+        movabs     rsp, OFFSET _initial_stack_top
+        movabs     rbp, OFFSET _initial_stack_top
 
         jmp     entry_64_bit
 
