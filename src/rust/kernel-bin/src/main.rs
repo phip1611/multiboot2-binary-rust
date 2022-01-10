@@ -12,8 +12,6 @@
 #![feature(alloc_error_handler)]
 // required to access ".message()" on PanicInfo
 #![feature(panic_info_message)]
-#![feature(const_mut_refs)]
-#![feature(const_fn_trait_bound)]
 #![deny(missing_debug_implementations)]
 
 core::arch::global_asm!(include_str!("start.S"));
@@ -28,21 +26,21 @@ extern crate alloc;
 #[macro_use]
 mod panic;
 mod error;
+mod kernelheap;
 mod logger;
 mod sysinfo;
 mod uefi_gop_fb;
-mod kernelheap;
-mod mem;
 
-use core::fmt::Write;
 use crate::error::BootError;
+use crate::logger::LOGGER;
+use crate::uefi_gop_fb::UefiGopFramebuffer;
+use core::{mem, slice};
 use log::LevelFilter;
 use multiboot2::{BootInformation as Multiboot2Info, MbiLoadError};
 use uefi::prelude::Boot;
-use uefi::table::SystemTable;
+use uefi::table::boot::{MemoryDescriptor, MemoryType};
+use uefi::table::{Runtime, SystemTable};
 use uefi::Handle;
-use crate::logger::LOGGER;
-use crate::uefi_gop_fb::UefiGopFramebuffer;
 // use uefi::proto::console::text::Color;
 
 /// This symbol is referenced in "start.S". It doesn't need the "pub"-keyword,
@@ -62,10 +60,14 @@ fn entry_rust(multiboot2_magic: u32, multiboot2_info_ptr: u32) -> ! {
         .expect("Can't fetch UEFI system table and UEFI image handle.");
     log::info!("UEFI system table and UEFI image handle valid.");
 
-    let mut uefi_fb = UefiGopFramebuffer::new(&uefi_boot_system_table).expect("No Framebuffer available!");
+    let uefi_fb =
+        UefiGopFramebuffer::new(&uefi_boot_system_table).expect("No Framebuffer available!");
     LOGGER.init_framebuffer_logger(uefi_fb.clone());
     log::debug!("{:#?}", &uefi_boot_system_table);
 
+    let uefi_rt_system_table = exit_uefi_boot_services(uefi_boot_system_table, uefi_image_handle);
+
+    log::info!("UEFI boot services exited");
 
     // Make s
 
@@ -112,6 +114,30 @@ fn get_uefi_info(info: &Multiboot2Info) -> Result<(SystemTable<Boot>, Handle), (
     let table = unsafe { SystemTable::<Boot>::from_ptr(table) }.ok_or(())?;
 
     Ok((table, handle))
+}
+
+fn exit_uefi_boot_services<'a>(
+    table: SystemTable<Boot>,
+    handle: Handle,
+) -> Result<(SystemTable<Runtime>, &'a mut [u8]), ()> {
+    let mmap_storage = {
+        let max_mmap_size = table.boot_services().memory_map_size().map_size
+            + 8 * mem::size_of::<MemoryDescriptor>();
+        let ptr = table
+            .boot_services()
+            .allocate_pool(MemoryType::LOADER_DATA, max_mmap_size)
+            .map_err(|_| ())?
+            .log();
+        unsafe { slice::from_raw_parts_mut(ptr, max_mmap_size) }
+    };
+
+    let uefi_rt_system_table = table
+        .exit_boot_services(handle, mmap_storage)
+        .unwrap()
+        .unwrap()
+        .0;
+
+    Ok((uefi_rt_system_table, mmap_storage))
 }
 
 // see https://docs.rust-embedded.org/embedonomicon/smallest-no-std.html

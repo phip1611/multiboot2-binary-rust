@@ -1,11 +1,10 @@
 //! See [`GlobalStaticChunkAllocator`].
 
-use core::alloc::{
-    GlobalAlloc,
-    Layout,
+use crate::kernelheap::chunk_allocator::{
+    ChunkAllocator, ChunkAllocatorError, DEFAULT_ALLOCATOR_CHUNK_SIZE,
 };
-use kernel_lib::mutex::SimpleMutex;
-use crate::kernelheap::chunk::{ChunkAllocator, ChunkAllocatorError, DEFAULT_ALLOCATOR_CHUNK_SIZE};
+use crate::mutex::SimpleMutex;
+use core::alloc::{GlobalAlloc, Layout};
 
 #[derive(Debug)]
 pub enum GlobalStaticChunkAllocatorError {
@@ -94,8 +93,8 @@ unsafe impl<'a> GlobalAlloc for GlobalStaticChunkAllocator<'a> {
 #[cfg(test)]
 #[allow(unused)]
 mod tests {
-    use crate::mem::{PAGE_SIZE, PageAlignedByteBuf};
     use super::*;
+    use crate::mem::{PageAlignedByteBuf, PAGE_SIZE};
 
     // must be a multiple of 8; 32 is equivalent to two pages
     const CHUNK_COUNT: usize = 32;

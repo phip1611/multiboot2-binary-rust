@@ -1,6 +1,6 @@
 use core::cell::UnsafeCell;
-use core::sync::atomic::{AtomicBool, Ordering};
 use core::ops::{Deref, DerefMut};
+use core::sync::atomic::{AtomicBool, Ordering};
 
 const UNLOCKED: bool = false;
 const LOCKED: bool = true;
@@ -13,10 +13,10 @@ pub struct SimpleMutex<T> {
     lock: AtomicBool,
 }
 
-unsafe impl <T> Send for SimpleMutex<T> {}
-unsafe impl <T> Sync for SimpleMutex<T> {}
+unsafe impl<T> Send for SimpleMutex<T> {}
+unsafe impl<T> Sync for SimpleMutex<T> {}
 
-impl <T> SimpleMutex<T> {
+impl<T> SimpleMutex<T> {
     pub const fn new(data: T) -> Self {
         Self {
             data: UnsafeCell::new(data),
@@ -33,19 +33,14 @@ impl <T> SimpleMutex<T> {
 
     pub fn lock(&self) -> SimpleMutexGuard<T> {
         loop {
-            let lock_obtained = self.lock.compare_exchange(
-                UNLOCKED,
-                LOCKED,
-                Ordering::SeqCst,
-                Ordering::SeqCst
-            );
+            let lock_obtained =
+                self.lock
+                    .compare_exchange(UNLOCKED, LOCKED, Ordering::SeqCst, Ordering::SeqCst);
             if lock_obtained.is_ok() {
                 break;
             }
-        };
-        SimpleMutexGuard {
-            lock: &self
         }
+        SimpleMutexGuard { lock: &self }
     }
 }
 
@@ -60,12 +55,13 @@ pub struct SimpleMutexGuard<'a, T> {
     lock: &'a SimpleMutex<T>,
 }
 
-impl <'a, T> SimpleMutexGuard<'a, T> {
+impl<'a, T> SimpleMutexGuard<'a, T> {
     /// This method is convenient, when you want to execute code while the lock is held
     /// and the lock doesn't hold the data. This is useful for advisory locks, like
     /// [`SimpleMutex<())`].
     pub fn execute_while_locked<U, R>(&self, actions: U) -> R
-        where U: FnOnce() -> R
+    where
+        U: FnOnce() -> R,
     {
         core::sync::atomic::compiler_fence(Ordering::SeqCst);
         let res = actions();
@@ -94,7 +90,6 @@ impl<T> Drop for SimpleMutexGuard<'_, T> {
         self.lock.lock.store(UNLOCKED, Ordering::SeqCst);
     }
 }
-
 
 #[cfg(test)]
 mod tests {

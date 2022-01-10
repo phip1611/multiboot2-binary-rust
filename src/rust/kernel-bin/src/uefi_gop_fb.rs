@@ -1,13 +1,15 @@
 //! Module for the UEFI frame buffer logger.
 
 use alloc::sync::Arc;
-use core::{ptr, slice};
 use core::fmt::{Debug, Formatter, Write};
+use core::{ptr, slice};
 use font8x8::UnicodeFonts;
-use uefi::proto::console::gop::{FrameBuffer, GraphicsOutput, Mode, ModeInfo, PixelBitmask, PixelFormat};
+use kernel_lib::mutex::SimpleMutex;
+use uefi::proto::console::gop::{
+    FrameBuffer, GraphicsOutput, Mode, ModeInfo, PixelBitmask, PixelFormat,
+};
 use uefi::table::{Boot, SystemTable};
 use uefi::{Completion, ResultExt};
-use kernel_lib::mutex::SimpleMutex;
 
 const PREFERRED_HEIGHT: usize = 768;
 const PREFERRED_WIDTH: usize = 1024;
@@ -17,6 +19,9 @@ const LINE_SPACING: usize = 0;
 /// Additional vertical space between separate log messages
 const LOG_SPACING: usize = 2;
 
+/// Defines the framebuffer my kernel uses, that was initialized by the
+/// Graphics Output Protocol (GOP) of UEFI. This code is heavily inspired
+/// by the `bootloader` crate.
 pub struct UefiGopFramebuffer<'a> {
     // Framebuffer object from UEFI
     framebuffer_obj: FrameBuffer<'a>,
@@ -28,7 +33,7 @@ pub struct UefiGopFramebuffer<'a> {
     // current write position
     x_pos: usize,
     // current read position
-    y_pos: usize
+    y_pos: usize,
 }
 
 impl<'a> UefiGopFramebuffer<'a> {
@@ -45,7 +50,8 @@ impl<'a> UefiGopFramebuffer<'a> {
 
         let framebuffer_mode = gop.current_mode_info();
         let mut framebuffer = gop.frame_buffer();
-        let framebuffer_slice = unsafe { slice::from_raw_parts_mut(framebuffer.as_mut_ptr(), framebuffer.size()) };
+        let framebuffer_slice =
+            unsafe { slice::from_raw_parts_mut(framebuffer.as_mut_ptr(), framebuffer.size()) };
 
         let mut obj = Self {
             framebuffer_obj: framebuffer,
@@ -53,12 +59,17 @@ impl<'a> UefiGopFramebuffer<'a> {
             framebuffer_mode,
 
             x_pos: 0,
-            y_pos: 0
+            y_pos: 0,
         };
         obj.clear();
 
         log::debug!("UEFI Framebuffer initialized!");
-        log::debug!("Using UEFI GOP Mode: {}x{}, pixel_format={:?}", obj.width(), obj.height(), obj.pixel_format() );
+        log::debug!(
+            "Using UEFI GOP Mode: {}x{}, pixel_format={:?}",
+            obj.width(),
+            obj.height(),
+            obj.pixel_format()
+        );
 
         Ok(Arc::new(SimpleMutex::new(obj)))
     }
@@ -81,11 +92,15 @@ impl<'a> UefiGopFramebuffer<'a> {
             _ => None,
         }
         .ok_or(())*/
-        gop.modes().map(Completion::unwrap).filter(|mode: &Mode| {
-           let w = mode.info().resolution().0;
-           let h = mode.info().resolution().1;
-            w == PREFERRED_WIDTH && h == PREFERRED_HEIGHT
-        }).next().ok_or(())
+        gop.modes()
+            .map(Completion::unwrap)
+            .filter(|mode: &Mode| {
+                let w = mode.info().resolution().0;
+                let h = mode.info().resolution().1;
+                w == PREFERRED_WIDTH && h == PREFERRED_HEIGHT
+            })
+            .next()
+            .ok_or(())
     }
 
     fn write_char(&mut self, c: char) {
@@ -122,7 +137,7 @@ impl<'a> UefiGopFramebuffer<'a> {
         let color = match self.pixel_format() {
             PixelFormat::Rgb => [intensity, intensity, intensity / 2, 0],
             PixelFormat::Bgr => [intensity / 2, intensity, intensity, 0],
-            _ => panic!("invalid pixel format")
+            _ => panic!("invalid pixel format"),
         };
         let bytes_per_pixel = self.bytes_per_pixel();
         let byte_offset = pixel_offset * bytes_per_pixel;

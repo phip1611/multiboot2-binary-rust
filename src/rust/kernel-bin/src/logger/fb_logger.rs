@@ -1,18 +1,16 @@
+use crate::UefiGopFramebuffer;
 use alloc::sync::Arc;
 use core::fmt::{Debug, Formatter, Write};
-use log::Record;
-use uart_16550::SerialPort;
 use kernel_lib::mutex::SimpleMutex;
-use crate::UefiGopFramebuffer;
+use log::Record;
 
 /// Uses the framebuffer retrieved by UEFI GOP (Graphics Output Protocol) to draw
 /// log messages to the screen.
 pub struct FramebufferLogger<'a> {
-    framebuffer: Arc<SimpleMutex<UefiGopFramebuffer<'a>>>
+    framebuffer: Arc<SimpleMutex<UefiGopFramebuffer<'a>>>,
 }
 
 impl<'a> FramebufferLogger<'a> {
-
     pub fn new(framebuffer: Arc<SimpleMutex<UefiGopFramebuffer<'a>>>) -> Self {
         Self { framebuffer }
     }

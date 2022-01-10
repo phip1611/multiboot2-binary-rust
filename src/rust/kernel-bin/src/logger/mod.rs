@@ -1,16 +1,16 @@
-use alloc::sync::Arc;
+use crate::logger::fb_logger::FramebufferLogger;
 use crate::logger::qemu_debugcon::QemuDebugconLogger;
 use crate::logger::serial::SerialLogger;
+use crate::UefiGopFramebuffer;
+use alloc::sync::Arc;
 use core::sync::atomic::{AtomicBool, Ordering};
 use kernel_lib::mutex::SimpleMutex;
 use log::{LevelFilter, Log, Metadata, Record};
 use runs_inside_qemu::runs_inside_qemu;
-use crate::logger::fb_logger::FramebufferLogger;
-use crate::UefiGopFramebuffer;
 
+mod fb_logger;
 mod qemu_debugcon;
 mod serial;
-mod fb_logger;
 
 /// Public logger that gets used by [`log`].
 pub static LOGGER: LoggerFacade = LoggerFacade::new();
@@ -45,7 +45,6 @@ impl<'a> LoggerFacade<'a> {
 
         self.init_self(screen_level);
         self.init_generic();
-
 
         log::info!("KernelLogger init done");
     }

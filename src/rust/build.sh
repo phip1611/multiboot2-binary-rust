@@ -24,6 +24,7 @@ do
      cd "$LIB" || exit
      cargo build
      cargo test
+     cargo fmt -- --check
    )
 done
 
@@ -40,6 +41,7 @@ do
    (
      cd "$BIN" || exit
      cargo build
+     cargo fmt -- --check
      # tests don't work so far
      # cargo test --target x86_64-unknown-linux-gnu
    )

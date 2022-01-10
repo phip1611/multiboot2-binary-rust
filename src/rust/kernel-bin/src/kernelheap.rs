@@ -6,11 +6,8 @@
 //! a second slice as management storage, and then can manage the memory. It manages
 //! the memory in chunks of 256 bytes.
 
-use crate::kernelheap::global_static_alloc::GlobalStaticChunkAllocator;
-use crate::mem::PageAlignedByteBuf;
-
-mod chunk;
-mod global_static_alloc;
+use kernel_lib::kernelheap::global_static_allocator::GlobalStaticChunkAllocator;
+use kernel_lib::mem::PageAlignedByteBuf;
 
 /// Chunk size must be a multiple of 8, so that the bitmap can cover all fields properly.
 const MULTIPLE_OF: usize = 8;
@@ -35,4 +32,3 @@ pub fn init() {
 fn alloc_error_handler(layout: core::alloc::Layout) -> ! {
     panic!("alloc error: {:#?}", layout);
 }
-

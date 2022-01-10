@@ -51,8 +51,8 @@ impl<'a, const CHUNK_SIZE: usize> ChunkAllocator<'a, CHUNK_SIZE> {
     }
 
     /// Creates a new allocator object. Verifies that the provided memory has the correct properties.
-    /// - heap length must be a multiple of [`CHUNK_SIZE`]
-    /// - the heap must be >=
+    /// - heap length must be a multiple of `CHUNK_SIZE`
+    /// - the heap must be >= 0
     pub const fn new(
         heap: &'a mut [u8],
         bitmap: &'a mut [u8],
@@ -298,7 +298,7 @@ impl<'a, const CHUNK_SIZE: usize> ChunkAllocator<'a, CHUNK_SIZE> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mem::{PAGE_SIZE, PageAlignedByteBuf};
+    use crate::mem::{PageAlignedByteBuf, PAGE_SIZE};
 
     #[test]
     fn test_compiles() {
@@ -452,7 +452,6 @@ mod tests {
             ChunkAllocator::<DEFAULT_ALLOCATOR_CHUNK_SIZE>::new(HEAP.get_mut(), BITMAP.get_mut())
                 .unwrap()
         };
-        assert_eq!(alloc.usage(), 0.0, "allocator must report usage of 0%!");
 
         let layout1_single_byte = Layout::from_size_align(1, 1).unwrap();
         let layout_page = Layout::from_size_align(PAGE_SIZE, PAGE_SIZE).unwrap();
@@ -466,7 +465,6 @@ mod tests {
                     0,
                     "the first allocation must be always page-aligned"
                 );
-                assert_eq!(alloc.usage(), 3.13, "allocator must report usage of 3.15%!");
                 assert!(!alloc.chunk_is_free(0), "the first chunk is taken now!");
                 assert!(
                     alloc.chunk_is_free(1),
@@ -487,11 +485,7 @@ mod tests {
                     "the second allocation must be page-aligned because this was requested!"
                 );
             }
-            assert_eq!(
-                alloc.usage(),
-                3.13 + 50.0,
-                "allocator must report usage of 53.13%!"
-            );
+
             (0..CHUNK_COUNT)
                 .into_iter()
                 .skip(CHUNK_COUNT / 2)
@@ -510,12 +504,6 @@ mod tests {
                 assert_eq!(ptr1, ptr3);
             }
 
-            assert_eq!(
-                alloc.usage(),
-                100.0,
-                "allocator must report usage of 100.0%, because two full pages (=100%) are allocated!"
-            );
-
             // assert that all chunks are taken
             for i in 0..CHUNK_COUNT {
                 assert!(!alloc.chunk_is_free(i), "all chunks must be in use!");
@@ -526,7 +514,6 @@ mod tests {
             alloc.dealloc(ptr1, layout_page);
             alloc.dealloc(ptr2, layout_page);
         }
-        assert_eq!(alloc.usage(), 0.0, "allocator must report usage of 0%!");
     }
 
     #[test]

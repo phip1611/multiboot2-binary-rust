@@ -1,7 +1,7 @@
-use core::cell::UnsafeCell;
-use core::sync::atomic::{Ordering, AtomicU64};
-use core::ops::{Deref, DerefMut};
 use crate::mutex::SimpleMutex;
+use core::cell::UnsafeCell;
+use core::ops::{Deref, DerefMut};
+use core::sync::atomic::{AtomicU64, Ordering};
 
 /// A simple read write lock. Allows either n readers or one writer.
 #[derive(Debug)]
@@ -12,10 +12,10 @@ pub struct SimpleRwLock<T> {
     read_count: AtomicU64,
 }
 
-unsafe impl <T> Send for SimpleRwLock<T> {}
-unsafe impl <T> Sync for SimpleRwLock<T> {}
+unsafe impl<T> Send for SimpleRwLock<T> {}
+unsafe impl<T> Sync for SimpleRwLock<T> {}
 
-impl <T> SimpleRwLock<T> {
+impl<T> SimpleRwLock<T> {
     pub const fn new(data: T) -> Self {
         Self {
             data: UnsafeCell::new(data),
@@ -32,16 +32,11 @@ impl <T> SimpleRwLock<T> {
         self.data.into_inner()
     }*/
 
-
     pub fn try_lock_read(&self) -> Result<SimpleRwLockReadGuard<T>, ()> {
         let lock = self.critical_section.lock();
         lock.execute_while_locked(&|| {
             if self.can_read() {
-                Ok(
-                    SimpleRwLockReadGuard {
-                        lock: &self
-                    }
-                )
+                Ok(SimpleRwLockReadGuard { lock: &self })
             } else {
                 Err(())
             }
@@ -52,15 +47,10 @@ impl <T> SimpleRwLock<T> {
         let lock = self.critical_section.lock();
         lock.execute_while_locked(&|| {
             if self.can_write() {
-                Ok(
-                    SimpleRwLockWriteGuard {
-                        lock: &self
-                    }
-                )
+                Ok(SimpleRwLockWriteGuard { lock: &self })
             } else {
                 Err(())
             }
-
         })
     }
 
@@ -136,7 +126,6 @@ impl<T> Drop for SimpleRwLockReadGuard<'_, T> {
         self.lock.read_count.fetch_sub(1, Ordering::SeqCst);
     }
 }
-
 
 #[cfg(test)]
 mod tests {

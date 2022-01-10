@@ -10,6 +10,20 @@ and `UEFI` as firmware environment.
 *Screenshot from our kernel running in QEMU. It can fetch some information about it's environment
 and print it to the screen. If you boot it on your private computer, it would look similar.*
 
+## UPDATE Jan 2022
+I updated this because in the meantime I gained more knowledge and experience. There were a few bad code decisions
+that I wanted to remove or improve.
+
+TL;DR:
+- ✅ Multiboot2 binary written in Rust; bootable by GRUB
+- ✅ Logging to: Serial, QEMU Debugcon, and Framebuffer from UEFI Graphics Output Protocol (GOP)
+- ✅ Kernelheap: very basic; without paging or actually knowing how much physical memory is available
+- ✅ exit UEFI boot services
+- ❌ paging, page tables
+- ❌ multi cores (bootstrapping Application Processors (APs)). So far only Bootstrap Processor (BSP) in 64-bit long mode.
+- ❌ no typical kernel features, such as threads, keyboard input, etc.
+
+## Original README:
 
 Although this project could be developed to a fully functional (micro)kernel, this is out of scope of this prototype. It is 
 limited to fetch data from `UEFI` firmware and `cpuid` and logging this information to the screen. The main goals 
