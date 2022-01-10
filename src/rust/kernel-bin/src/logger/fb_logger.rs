@@ -4,6 +4,9 @@ use core::fmt::{Debug, Formatter, Write};
 use kernel_lib::mutex::SimpleMutex;
 use log::Record;
 
+/// Additional vertical space between separate log messages
+const LOG_SPACING: usize = 2;
+
 /// Uses the framebuffer retrieved by UEFI GOP (Graphics Output Protocol) to draw
 /// log messages to the screen.
 pub struct FramebufferLogger<'a> {
@@ -27,6 +30,7 @@ impl<'a> FramebufferLogger<'a> {
             record.line().unwrap_or(0),
             record.args()
         );
+        framebuffer.add_vspace(LOG_SPACING);
     }
 }
 

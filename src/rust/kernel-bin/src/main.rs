@@ -33,6 +33,7 @@ mod uefi_gop_fb;
 
 use crate::error::BootError;
 use crate::logger::LOGGER;
+use crate::sysinfo::SysInfo;
 use crate::uefi_gop_fb::UefiGopFramebuffer;
 use core::{mem, slice};
 use log::LevelFilter;
@@ -63,28 +64,31 @@ fn entry_rust(multiboot2_magic: u32, multiboot2_info_ptr: u32) -> ! {
     let uefi_fb =
         UefiGopFramebuffer::new(&uefi_boot_system_table).expect("No Framebuffer available!");
     LOGGER.init_framebuffer_logger(uefi_fb.clone());
-    log::debug!("{:#?}", &uefi_boot_system_table);
 
-    let uefi_rt_system_table = exit_uefi_boot_services(uefi_boot_system_table, uefi_image_handle);
+    let (uefi_rt_system_table, _uefi_memory_map) =
+        exit_uefi_boot_services(uefi_boot_system_table, uefi_image_handle)
+            .expect("Exit UEFI boot services failed.");
 
     log::info!("UEFI boot services exited");
 
-    // Make s
+    if runs_inside_qemu::runs_inside_qemu().is_very_likely() {
+        log::info!("We run inside QEMU :)");
+    } else {
+        log::info!("We don't run in QEMU :O");
+    }
 
-    // panic_error!(BootError::PanicAlloc, "foobar");
-    /*x.get_cache_parameters().unwrap().for_each(|c| {
-        log::debug!("{:#?}", c);
-    }*/
-    // log::info!("UEFI System Table: \n{:#?}", uefi_st_bs);
-    // uefi_st_bs.boot_services().stall(1_000_000);
-    // uefi_st_bs.runtime_services().reset(ResetType::Shutdown, Status::SUCCESS, None);
-    // panic_error!(BootError::PanicAlloc, "houston, we have a (test) problem");
-    //});
-
-    // test that stack and function calling works
-    let a = 5;
-    let b = 4;
-    let _c = add_numbers(a, b);
+    let sysinfo = SysInfo::new(&uefi_rt_system_table, &x86::cpuid::CpuId::new());
+    log::debug!("CPU: {:#?}", sysinfo.cpu_info().extended_brand_string());
+    log::debug!(
+        "Caches: {:#?}",
+        sysinfo
+            .cpu_info()
+            .cache_descriptions()
+            .iter()
+            .filter(|x| x.is_some())
+            .map(|x| x.unwrap())
+            .collect::<alloc::vec::Vec<_>>()
+    );
 
     loop {}
 }

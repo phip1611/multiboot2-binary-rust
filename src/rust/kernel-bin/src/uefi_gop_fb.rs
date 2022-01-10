@@ -16,8 +16,6 @@ const PREFERRED_WIDTH: usize = 1024;
 
 /// Additional vertical space between lines
 const LINE_SPACING: usize = 0;
-/// Additional vertical space between separate log messages
-const LOG_SPACING: usize = 2;
 
 /// Defines the framebuffer my kernel uses, that was initialized by the
 /// Graphics Output Protocol (GOP) of UEFI. This code is heavily inspired
@@ -135,8 +133,8 @@ impl<'a> UefiGopFramebuffer<'a> {
     fn write_pixel(&mut self, x: usize, y: usize, intensity: u8) {
         let pixel_offset = y * self.stride() + x;
         let color = match self.pixel_format() {
-            PixelFormat::Rgb => [intensity, intensity, intensity / 2, 0],
-            PixelFormat::Bgr => [intensity / 2, intensity, intensity, 0],
+            PixelFormat::Rgb => [intensity, intensity, intensity, 0],
+            PixelFormat::Bgr => [intensity, intensity, intensity, 0],
             _ => panic!("invalid pixel format"),
         };
         let bytes_per_pixel = self.bytes_per_pixel();
@@ -151,7 +149,7 @@ impl<'a> UefiGopFramebuffer<'a> {
         self.carriage_return()
     }
 
-    fn add_vspace(&mut self, space: usize) {
+    pub fn add_vspace(&mut self, space: usize) {
         self.y_pos += space;
     }
 

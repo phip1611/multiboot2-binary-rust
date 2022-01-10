@@ -2,7 +2,7 @@ use arrayvec::ArrayString;
 use core::fmt::Debug;
 use core::str::FromStr;
 use uefi::prelude::{Boot, SystemTable};
-use uefi::table::Revision;
+use uefi::table::{Revision, Runtime};
 use x86::cpuid::{CpuId, ExtendedFeatures, FeatureInfo, HypervisorInfo};
 
 #[derive(Debug)]
@@ -14,7 +14,7 @@ pub struct SysInfo {
 
 #[allow(unused)]
 impl SysInfo {
-    pub fn new(uefi_st: &SystemTable<Boot>, cpuid: &CpuId) -> Self {
+    pub fn new(uefi_st: &SystemTable<Runtime>, cpuid: &CpuId) -> Self {
         Self {
             os_name: "Phips' Rust Kernel",
             cpu_info: CpuInfo::new(&cpuid),
@@ -42,7 +42,7 @@ pub struct UefiInfo {
 
 #[allow(unused)]
 impl UefiInfo {
-    fn new(uefi_st: &SystemTable<Boot>) -> Self {
+    fn new(uefi_st: &SystemTable<Runtime>) -> Self {
         let mut firmware_vendor = ArrayString::new();
         uefi_st
             .firmware_vendor()
