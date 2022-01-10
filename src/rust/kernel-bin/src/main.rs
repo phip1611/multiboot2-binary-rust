@@ -32,7 +32,10 @@ mod sysinfo;
 
 use crate::error::BootError;
 use log::LevelFilter;
-use multiboot2::BootInformation as Multiboot2Info;
+use multiboot2::{BootInformation as Multiboot2Info, MbiLoadError};
+use uefi::prelude::Boot;
+use uefi::table::SystemTable;
+use uefi::Handle;
 // use uefi::proto::console::text::Color;
 
 /// This symbol is referenced in "start.S". It doesn't need the "pub"-keyword,
@@ -40,16 +43,12 @@ use multiboot2::BootInformation as Multiboot2Info;
 #[no_mangle]
 fn entry_rust(multiboot2_magic: u32, multiboot2_info_ptr: u32) -> ! {
     logger::init(LevelFilter::Trace);
-
-    const MULTIBOOT2_MAGIC: u32 = 0x36d76289;
-    if multiboot2_magic != MULTIBOOT2_MAGIC {
-        boot_error!(
-            BootError::Multiboot2MagicWrong,
-            "multiboot2 magic invalid, abort boot!"
-        );
-    }
-    let _mb2_boot_info: Multiboot2Info = unsafe { multiboot2::load(multiboot2_info_ptr as usize) }
-        .expect("MBI pointer must be valid!");
+    let multiboot2_info = get_multiboot2_info(multiboot2_magic, multiboot2_info_ptr)
+        .expect("Multiboot2 information structure pointer must be valid!");
+    log::info!("Valid Multiboot2 boot.");
+    let (uefi_image_handle, uefi_boot_system_table) = get_uefi_info(&multiboot2_info)
+        .expect("Can't fetch UEFI system table and UEFI image handle.");
+    log::info!("UEFI system table and UEFI image handle valid.");
 
     // Make s
 
@@ -69,6 +68,33 @@ fn entry_rust(multiboot2_magic: u32, multiboot2_info_ptr: u32) -> ! {
     let _c = add_numbers(a, b);
 
     loop {}
+}
+
+/// Returns [`Multiboot2Info`] or dies/panics.
+fn get_multiboot2_info(
+    multiboot2_magic: u32,
+    multiboot2_info_ptr: u32,
+) -> Result<Multiboot2Info, MbiLoadError> {
+    const MULTIBOOT2_MAGIC: u32 = 0x36d76289;
+    if multiboot2_magic != MULTIBOOT2_MAGIC {
+        boot_error!(
+            BootError::Multiboot2MagicWrong,
+            "multiboot2 magic invalid, abort boot!"
+        );
+    }
+    unsafe { multiboot2::load(multiboot2_info_ptr as usize) }
+}
+
+/// Returns a pair of the UEFI system table with boot services enabled and the UEFI
+/// image handle.
+fn get_uefi_info(info: &Multiboot2Info) -> Result<(SystemTable<Boot>, Handle), ()> {
+    let handle = info.efi_64_ih().ok_or(())?.image_handle() as *mut _;
+    let handle = unsafe { Handle::from_ptr(handle) }.ok_or(())?;
+
+    let table = info.efi_sdt_64_tag().ok_or(())?.sdt_address() as *mut _;
+    let table = unsafe { SystemTable::<Boot>::from_ptr(table) }.ok_or(())?;
+
+    Ok((table, handle))
 }
 
 // see https://docs.rust-embedded.org/embedonomicon/smallest-no-std.html
