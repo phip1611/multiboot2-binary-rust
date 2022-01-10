@@ -1,8 +1,5 @@
 use core::cell::UnsafeCell;
 
-
-
-
 /// A fake lock which helps to signal Rust memory safety on global static mutable vars.
 /// **This should only be used during the boot process as long as only a single core
 /// (the boot processor) is used**.
@@ -15,10 +12,10 @@ pub struct FakeLock<T> {
 }
 
 // tell Rust this is safe - use with caution!
-unsafe impl <T> Send for FakeLock<T> {}
-unsafe impl <T> Sync for FakeLock<T> {}
+unsafe impl<T> Send for FakeLock<T> {}
+unsafe impl<T> Sync for FakeLock<T> {}
 
-impl <T> FakeLock<T> {
+impl<T> FakeLock<T> {
     /// Creates a new lock. Constant function, can be used in global statics.
     pub const fn new(data: T) -> Self {
         Self {
@@ -37,7 +34,6 @@ impl <T> FakeLock<T> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -46,14 +42,10 @@ mod tests {
 
     #[test]
     fn test_boot_lock() {
-        fn use_static_str(_static_str: &'static str) {
-
-        }
+        fn use_static_str(_static_str: &'static str) {}
         assert_eq!("", GLOBAL_TEST.get());
         GLOBAL_TEST.get_mut().push_str("Moin");
         assert_eq!("Moin", GLOBAL_TEST.get());
         use_static_str(GLOBAL_TEST.get().as_str())
     }
-
-
 }

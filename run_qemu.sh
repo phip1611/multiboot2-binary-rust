@@ -21,7 +21,7 @@ OVMF_FW_PATH="${QEMU_DIR}/ovmf/OVMF_CODE.fd"
 OVMF_VARS_PATH="${QEMU_DIR}/ovmf/OVMF_VARS.fd"
 
 BUILD_DIR="./build"
-FINAL_ELF="${BUILD_DIR}/multiboot2-binary.elf"
+FINAL_ELF="${BUILD_DIR}/multiboot2-kernel_x86_64.elf"
 
 fn_main() {
   rm -rf "${QEMU_VOLUME_DIR}"
@@ -70,7 +70,7 @@ fn_start_qemu() {
           # Enable serial
           #
           # Connect the serial port to the host. OVMF is kind enough to connect
-          # the UEFI stdout and stdin to that port too.
+          # the UEFI stdout and stderr to that port too.
           "-serial"
           "stdio"
 
@@ -100,7 +100,7 @@ fn_prepare_grub_installation() {
   #
   grub-mkstandalone -O x86_64-efi -o "${QEMU_VOLUME_DIR}/EFI/BOOT/BOOTX64.EFI" \
       "/boot/grub/grub.cfg=${QEMU_DIR}/grub.cfg" \
-      "/boot/multiboot2-binary.elf=$FINAL_ELF"
+      "/boot/multiboot2-kernel_x86_64.elf=$FINAL_ELF"
       # this is poorly documented, but the tool allows to specify key-value
       # pairs where the value on the right, a file, will be built into the "(memdisk)"
       # volume inside the grub image

@@ -14,7 +14,7 @@ cd "$DIR" || exit
 # We develop them as we would use them on the host platform. This makes test
 # execution easier (as long as https://github.com/rust-lang/cargo/issues/9710 exists).
 LIBS=(
-    "rust-utils"
+    "kernel-lib"
 )
 
 for LIB in "${LIBS[@]}"
@@ -24,6 +24,7 @@ do
      cd "$LIB" || exit
      cargo build
      cargo test
+     cargo fmt -- --check
    )
 done
 
@@ -31,7 +32,7 @@ done
 
 
 BINS=(
-    "rust-kernel"
+    "kernel-bin"
 )
 
 for BIN in "${BINS[@]}"
@@ -40,6 +41,7 @@ do
    (
      cd "$BIN" || exit
      cargo build
+     cargo fmt -- --check
      # tests don't work so far
      # cargo test --target x86_64-unknown-linux-gnu
    )
