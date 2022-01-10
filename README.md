@@ -22,16 +22,17 @@ TL;DR:
 - ❌ paging, page tables
 - ❌ multi cores (bootstrapping Application Processors (APs)). So far only Bootstrap Processor (BSP) in 64-bit long mode.
 - ❌ no typical kernel features, such as threads, keyboard input, etc.
+- ❌ ELF/kernel is not relocatable --> required to work on all UEFI platforms without problems
 
 ## Original README:
 
-Although this project could be developed to a fully functional (micro)kernel, this is out of scope of this prototype. It is 
-limited to fetch data from `UEFI` firmware and `cpuid` and logging this information to the screen. The main goals 
-were to figure out how such a setup could look like and how we could keep developer experience and productivity high. 
-For example, to achieve the latter, this repository contains an easy mechanism to start it in `QEMU`.
-This project uses `GRUB` + `multiboot2` instead of a custom `UEFI`-loader-app, because at the company
-where I developed this prototype, we have a component, that must be loadable by `GRUB`. Therefore it was important
-to collect experience, how this can be done in Rust.
+Although this project could be developed to a fully functional (micro)kernel, this is out of scope of this prototype. 
+It is limited to fetch data from `UEFI` firmware, init a framebuffer, read data from  `cpuid`, and logging this 
+information to the screen. The main goals were to figure out how such a setup could look like and how we could keep 
+developer experience and productivity high. For example, to achieve the latter, this repository contains an easy 
+mechanism to start it in `QEMU`. This project uses `GRUB` + `multiboot2` instead of a custom `UEFI`-loader-app, 
+because at the company where I developed this prototype, we have a component, that must be loadable by `GRUB`. 
+Therefore it was important to collect experience, how this can be done in Rust.
 
 ## Build Process of the Kernel
 
@@ -43,8 +44,8 @@ setup. The final binary gets completely assembled by `cargo`. We include [global
 (i.e., `*.S`-files next to the `*.rs`-files) and use a custom linker script (for `GNU ld`). Therefore, the setup
 is similar to several `C`-projects, where also Assembly-Source and High Level-Source are compiled together in one build step.
 
-There is no way this can be achieved without any assembly at all, because some low-level, architecture-specific preparetion
-code is always required. At least one needs to configure the stack properly.
+There is no way this can be achieved without any assembly at all, because some low-level, architecture-specific 
+preparation code is always required. At least one needs to configure the stack properly.
 
 The figure below gives you a comprehensive overview over the assembling of the final artefact, an `ELF64-x86_64`-file.
 
@@ -56,7 +57,7 @@ When you test this project (`run_qemu.sh`), it will
 1) start QEMU + loads `edk2/OVMF` [[3]] as `UEFI`-environment [[4]] 
 2) `OVMF` will automatically boot `GRUB` (an EFI file)
 3) the `GRUB`-EFI-file has a `grub.cfg` file and the Rust binary built-in into the `GRUB`-internal `(memdisk)`-filesystem.
-4) `GRUB` loads the cfg-file which starts the binary
+4) `GRUB` loads the cfg-file which starts the binary with a Multiboot2 handoff
 
 
 With a boot-order of `firmware > GRUB > %my-binary%`, the binary could take the role of:
@@ -182,10 +183,15 @@ but we have a `multiboot2` binary/kernel here. Therefore, I took the approach of
 be called, which is specified by the assembly code in `start.S`.
 
 #### Getting Output (in QEMU) & Debug
-It's not completely trivial to get output in this early stage of the boot.
-Luckily, `QEMU` helps us. 
+Getting output in a very early stage of the boot is hard. Especially, if you have a lack of experience, as I did when
+I started creating this project. Fortunately, there are a few easy ways, how you can get output from QEMU but also 
+from a real x86_64 computer. Please look into the code to check out the serial logger, the QEMU debugcon logger, and
+the UEFI GOP Framebuffer logger. The first two logger are really simple. In the end, they just output ASCII via an 
+x86 I/O port and QEMU can fetch it. Some computers also have serial outputs, which you can use to get the output from
+the serial line. The UEFI framebuffer output is of course the coolest one, but it needs quite a lot of setup, until
+it works (if you don't know yet how the could should look like // you are not experienced with this).
 
-##### Output & Debug A: Change Register Values and `halt`
+Another way is also the following:
 You can write a value into a register and `hlt` (stop the processor). In the QEMU GUI, you can open 
 `View > compatmonitor0` and type `info registers`- you should see the register values!
 Use this code for example:
@@ -193,13 +199,6 @@ Use this code for example:
 ```rust
 unsafe { asm!("mov edi, {val}", "cli", "hlt", val = const 0x0bad_f00d_u32) };
 ```
-
-##### Output & Debug B: Use QEMUs 'debugcon' Feature
-On `x86[_64]` one can the `I/O-port 0xe9` to write data, for example
-ASCII to the outer world. QEMU can capture this into a file. See
-this [blog post for more details](https://phip1611.de/blog/how-to-use-qemus-debugcon-feature-and-write-to-a-file/).
-
----
 
 ## Trivia/FAQ/Good to know/What I've learnt
 - Q: Are OPCODES between 32-bit and 64-bit code different?
@@ -211,7 +210,6 @@ this [blog post for more details](https://phip1611.de/blog/how-to-use-qemus-debu
          otherwise (relative) jumps and loads may get damaged.
 
 ## Open Questions / TODO
-- [x] Heap inside application?!
 - [ ] How to ensure in Linker Script, that no code is mapped to address
       where UEFI stuff is stored?
   - [ ] make file relocatable \
