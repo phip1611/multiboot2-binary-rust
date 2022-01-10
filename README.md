@@ -6,7 +6,7 @@ to do with "multiple OS boot environments"! The binary gets packaged as an `ELF6
 by `GRUB` [[0]], a`multiboot2`-compliant bootloader. The demo project focuses on the **x86_64** processor architecture 
 and `UEFI` as firmware environment.
 
-![Rust Kernel QEMU Screenshot](./doc/figures/rust-kernel-qemu-screenshot-serial-framebuffer.png "Screenshot of Rust Kernel running inside QEMU")
+![Rust Kernel QEMU Screenshot](./doc/figures/rust-kernel-qemu-screenshot.png "Screenshot of Rust Kernel running inside QEMU")
 *Screenshot of our kernel running in QEMU. On the left you see the serial output, on the right the output to the
 framebuffer. The kernel fetches some information about its environment and print it to the screen. If you boot it 
 on your private computer, it would look similar as shown on the right.*
