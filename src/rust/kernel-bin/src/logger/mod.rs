@@ -9,14 +9,7 @@ mod qemu_debugcon;
 mod serial;
 
 /// Public logger that gets used by [`log`].
-static LOGGER: LoggerFacade = LoggerFacade::new();
-
-pub fn init(level: LevelFilter) {
-    LOGGER.init(level);
-    log::set_logger(&LOGGER).expect("logger init must happen only once");
-    log::set_max_level(LevelFilter::max());
-    log::info!("KernelLogger init done");
-}
+pub static LOGGER: LoggerFacade = LoggerFacade::new();
 
 /// Logger facade that glues the log log level together with
 /// all possible logging implementations. Uses the [`log`]-crate
@@ -24,7 +17,10 @@ pub fn init(level: LevelFilter) {
 #[derive(Debug)]
 pub struct LoggerFacade {
     init_done: AtomicBool,
-    level: SimpleMutex<LevelFilter>,
+    /// Level for log messages that get logged to screen instead of a file.
+    /// Usually, we don't want to pollute the screen but keep all log messages
+    /// in a file.
+    screen_level: SimpleMutex<LevelFilter>,
     inner: SimpleMutex<Loggers>,
 }
 
@@ -32,23 +28,44 @@ impl LoggerFacade {
     const fn new() -> Self {
         Self {
             init_done: AtomicBool::new(false),
-            level: SimpleMutex::new(LevelFilter::Trace),
+            screen_level: SimpleMutex::new(LevelFilter::Trace),
             inner: SimpleMutex::new(Loggers::new()),
         }
     }
 
-    fn init(&self, level: LevelFilter) {
+    pub fn init(&self, screen_level: LevelFilter) {
         assert!(
             !self.init_done.load(Ordering::SeqCst),
             "logger may only be initialized once!"
         );
 
+        self.init_self(screen_level);
+        self.init_generic();
+
+
+        log::info!("KernelLogger init done");
+    }
+
+    /// Sets the level of messages that should be logged to the screen.
+    pub fn set_screen_level(&self, level: LevelFilter) {
+        *self.screen_level.lock() = level;
+    }
+
+    fn init_self(&self, screen_level: LevelFilter) {
         let mut inner = self.inner.lock();
         inner.init();
 
-        *self.level.lock() = level;
+        *self.screen_level.lock() = screen_level;
 
         self.init_done.store(true, Ordering::SeqCst);
+    }
+
+    fn init_generic(&self) {
+        log::set_logger(&LOGGER).expect("logger init must happen only once");
+        // by default: enable ALL levels
+        // --> un-enable some fields on the logger implementation, i.e. drop several messages
+        //     if the level is too unimportant for a certain logger
+        log::set_max_level(LevelFilter::max());
     }
 }
 
@@ -78,15 +95,28 @@ impl Loggers {
 
 impl Log for LoggerFacade {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level().to_level_filter() <= *self.level.lock()
+        // TODO: When is this getting called?!
+        metadata.level().to_level_filter() <= *self.screen_level.lock()
     }
 
     fn log(&self, record: &Record) {
         let mut inner = self.inner.lock();
 
+        // QEMU_DEBUGCON: log everything @ trace level, because I log this
+        // into a file instead of polluting the screen or the framebuffer.
         if let Some(logger) = inner.qemu_debugcon.as_mut() {
             logger.log(record);
         }
+
+        // I'm not sure about the interplay between .enabled() and log::set_max_level.
+        // Actually, I want something like this: Allow all levels but I can remove some
+        // levels for certain loggers.
+        if record.level().to_level_filter() >= *self.screen_level.lock() {
+            return;
+        }
+
+        // now only log stuff, that should not pollute the screen too much.
+
         if let Some(logger) = inner.serial.as_mut() {
             logger.log(record);
         }

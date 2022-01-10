@@ -36,13 +36,17 @@ use multiboot2::{BootInformation as Multiboot2Info, MbiLoadError};
 use uefi::prelude::Boot;
 use uefi::table::SystemTable;
 use uefi::Handle;
+use crate::logger::LOGGER;
 // use uefi::proto::console::text::Color;
 
 /// This symbol is referenced in "start.S". It doesn't need the "pub"-keyword,
 /// because visibility is a Rust feature and not important for the object file.
 #[no_mangle]
 fn entry_rust(multiboot2_magic: u32, multiboot2_info_ptr: u32) -> ! {
-    logger::init(LevelFilter::Trace);
+    // Error, Warn, Info, Debug -> Log to screen
+    // everything + Trace -> Log only to file
+    LOGGER.init(LevelFilter::Debug);
+
     let multiboot2_info = get_multiboot2_info(multiboot2_magic, multiboot2_info_ptr)
         .expect("Multiboot2 information structure pointer must be valid!");
     log::info!("Valid Multiboot2 boot.");
