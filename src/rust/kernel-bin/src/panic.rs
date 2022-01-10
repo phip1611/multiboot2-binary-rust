@@ -1,12 +1,11 @@
-use crate::boot_stage::{BootStage, BootStageAware};
 use crate::error::BootError;
 use core::fmt::Write;
 use core::panic::PanicInfo;
 use core::sync::atomic::Ordering;
-use utils::mutex::SimpleMutex;
+use kernel_lib::mutex::SimpleMutex;
 
 /// Global single instance of [`BootStageAwarePanicHandler`].
-pub static PANIC_HANDLER: BootStageAwarePanicHandler = BootStageAwarePanicHandler::new();
+pub static PANIC_HANDLER: PanicHandler = PanicHandler::new();
 
 #[inline(never)]
 #[panic_handler]
@@ -18,7 +17,7 @@ fn panic(info: &PanicInfo) -> ! {
 /// This helps to get more contextual information, especially when a panic can only be reported
 /// via registers (in early boot stage).
 #[macro_export]
-macro_rules! panic_error {
+macro_rules! boot_error {
     ($error_enum_variant:path, $($arg:tt)*) => {
         {
             let mut lock = $crate::panic::PANIC_HANDLER.panic_error_code().lock();
@@ -31,13 +30,13 @@ macro_rules! panic_error {
     }
 }
 
-pub struct BootStageAwarePanicHandler {
+pub struct PanicHandler {
     /// Tells if there is contextual information for the panic. This is set
     /// when the [`panic_error!`]-macro is used instead of [`panic!`].
     panic_error_code: SimpleMutex<Option<BootError>>,
 }
 
-impl BootStageAwarePanicHandler {
+impl PanicHandler {
     const fn new() -> Self {
         Self {
             panic_error_code: SimpleMutex::new(None),
@@ -99,11 +98,5 @@ impl BootStageAwarePanicHandler {
 
     pub fn panic_error_code(&self) -> &SimpleMutex<Option<BootError>> {
         &self.panic_error_code
-    }
-}
-
-impl BootStageAware for BootStageAwarePanicHandler {
-    fn next_boot_stage(&self, _boot_stage: BootStage) {
-        // Todo if we eventually do more logic here, we can update properties
     }
 }

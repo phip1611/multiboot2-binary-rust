@@ -49,6 +49,12 @@ impl <T> SimpleMutex<T> {
     }
 }
 
+impl<T: Default> Default for SimpleMutex<T> {
+    fn default() -> Self {
+        SimpleMutex::new(T::default())
+    }
+}
+
 #[derive(Debug)]
 pub struct SimpleMutexGuard<'a, T> {
     lock: &'a SimpleMutex<T>,

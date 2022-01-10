@@ -12,9 +12,7 @@ cd "$DIR" || exit
 
 # destination directory
 BUILD_DIR="./build"
-FINAL_ELF="${BUILD_DIR}/multiboot2-binary.elf"
-
-RUST_64_BIT_BIN="src/rust/rust-kernel/target/x86_64-none-bare_metal/debug/librust_multiboot2_64_bit_kernel.a"
+FINAL_ELF="${BUILD_DIR}/multiboot2-kernel_x86_64.elf"
 
 function fn_main() {
   ./src/rust/build.sh
@@ -31,9 +29,9 @@ function fn_prepare_build_dir() {
 function fn_copy_bin() {
   # symlink doesn't work, when GRUB makes a standalone image
   # ln -s "$(pwd)/src/rust/rust-kernel/target/x86_64-none-bare_metal/debug/rust-multiboot2-64-bit-kernel" \
-  # "${BUILD_DIR}/multiboot2-binary.elf"
-  cp "$(pwd)/src/rust/rust-kernel/target/x86_64-none-bare_metal/debug/rust-multiboot2-64-bit-kernel" \
-   "${BUILD_DIR}/multiboot2-binary.elf"
+  # "${BUILD_DIR}/multiboot2-kernel_x86_64.elf"
+  cp "$(pwd)/src/rust/kernel-bin/target/x86_64-none-bare_metal/debug/kernel-bin" \
+   "${BUILD_DIR}/multiboot2-kernel_x86_64.elf"
 }
 
 function fn_test_grub_multiboot2 {
