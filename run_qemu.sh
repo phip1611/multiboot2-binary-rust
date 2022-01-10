@@ -70,7 +70,7 @@ fn_start_qemu() {
           # Enable serial
           #
           # Connect the serial port to the host. OVMF is kind enough to connect
-          # the UEFI stdout and stdin to that port too.
+          # the UEFI stdout and stderr to that port too.
           "-serial"
           "stdio"
 
