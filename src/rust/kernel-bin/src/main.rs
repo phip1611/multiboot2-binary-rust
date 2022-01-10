@@ -12,6 +12,8 @@
 #![feature(alloc_error_handler)]
 // required to access ".message()" on PanicInfo
 #![feature(panic_info_message)]
+#![feature(const_mut_refs)]
+#![feature(const_fn_trait_bound)]
 #![deny(missing_debug_implementations)]
 
 core::arch::global_asm!(include_str!("start.S"));
@@ -26,10 +28,11 @@ extern crate alloc;
 #[macro_use]
 mod panic;
 mod error;
-mod kernelalloc;
 mod logger;
 mod sysinfo;
 mod uefi_gop_fb;
+mod kernelheap;
+mod mem;
 
 use core::fmt::Write;
 use crate::error::BootError;
@@ -49,6 +52,7 @@ fn entry_rust(multiboot2_magic: u32, multiboot2_info_ptr: u32) -> ! {
     // Error, Warn, Info, Debug -> Log to screen
     // everything + Trace -> Log only to file
     LOGGER.init(LevelFilter::Debug);
+    kernelheap::init();
 
     let multiboot2_info = get_multiboot2_info(multiboot2_magic, multiboot2_info_ptr)
         .expect("Multiboot2 information structure pointer must be valid!");
