@@ -28,3 +28,4 @@ arrayvec = { version = "0.7.2", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["display"] }
 runs_inside_qemu = "1.2.1"
 uart_16550 = "0.2.16"
+font8x8 = { version = "0.3.1", default-features = false, features = ["unicode"] }

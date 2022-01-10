@@ -1,12 +1,16 @@
+use alloc::sync::Arc;
 use crate::logger::qemu_debugcon::QemuDebugconLogger;
 use crate::logger::serial::SerialLogger;
 use core::sync::atomic::{AtomicBool, Ordering};
 use kernel_lib::mutex::SimpleMutex;
 use log::{LevelFilter, Log, Metadata, Record};
 use runs_inside_qemu::runs_inside_qemu;
+use crate::logger::fb_logger::FramebufferLogger;
+use crate::UefiGopFramebuffer;
 
 mod qemu_debugcon;
 mod serial;
+mod fb_logger;
 
 /// Public logger that gets used by [`log`].
 pub static LOGGER: LoggerFacade = LoggerFacade::new();
@@ -15,16 +19,16 @@ pub static LOGGER: LoggerFacade = LoggerFacade::new();
 /// all possible logging implementations. Uses the [`log`]-crate
 /// under the hood.
 #[derive(Debug)]
-pub struct LoggerFacade {
+pub struct LoggerFacade<'a> {
     init_done: AtomicBool,
     /// Level for log messages that get logged to screen instead of a file.
     /// Usually, we don't want to pollute the screen but keep all log messages
     /// in a file.
     screen_level: SimpleMutex<LevelFilter>,
-    inner: SimpleMutex<Loggers>,
+    inner: SimpleMutex<Loggers<'a>>,
 }
 
-impl LoggerFacade {
+impl<'a> LoggerFacade<'a> {
     const fn new() -> Self {
         Self {
             init_done: AtomicBool::new(false),
@@ -46,6 +50,11 @@ impl LoggerFacade {
         log::info!("KernelLogger init done");
     }
 
+    pub fn init_framebuffer_logger(&self, framebuffer: Arc<SimpleMutex<UefiGopFramebuffer<'a>>>) {
+        let mut inner = self.inner.lock();
+        inner.init_framebuffer(FramebufferLogger::new(framebuffer))
+    }
+
     /// Sets the level of messages that should be logged to the screen.
     pub fn set_screen_level(&self, level: LevelFilter) {
         *self.screen_level.lock() = level;
@@ -55,7 +64,7 @@ impl LoggerFacade {
         let mut inner = self.inner.lock();
         inner.init();
 
-        *self.screen_level.lock() = screen_level;
+        self.set_screen_level(screen_level);
 
         self.init_done.store(true, Ordering::SeqCst);
     }
@@ -72,16 +81,18 @@ impl LoggerFacade {
 /// Helper struct for [`LoggerFacade`] that contains references to all
 /// (possibly) existing loggers.
 #[derive(Debug)]
-struct Loggers {
+struct Loggers<'a> {
     qemu_debugcon: Option<QemuDebugconLogger>,
     serial: Option<SerialLogger>,
+    framebuffer: Option<FramebufferLogger<'a>>,
 }
 
-impl Loggers {
+impl<'a> Loggers<'a> {
     const fn new() -> Self {
         Self {
             qemu_debugcon: None,
             serial: None,
+            framebuffer: None,
         }
     }
 
@@ -91,12 +102,16 @@ impl Loggers {
             self.qemu_debugcon.replace(QemuDebugconLogger::new());
         }
     }
+
+    fn init_framebuffer(&mut self, framebuffer: FramebufferLogger<'a>) {
+        self.framebuffer.replace(framebuffer);
+    }
 }
 
-impl Log for LoggerFacade {
+impl<'a> Log for LoggerFacade<'a> {
     fn enabled(&self, metadata: &Metadata) -> bool {
         // TODO: When is this getting called?!
-        metadata.level().to_level_filter() <= *self.screen_level.lock()
+        metadata.level().to_level_filter() >= *self.screen_level.lock()
     }
 
     fn log(&self, record: &Record) {
@@ -111,13 +126,18 @@ impl Log for LoggerFacade {
         // I'm not sure about the interplay between .enabled() and log::set_max_level.
         // Actually, I want something like this: Allow all levels but I can remove some
         // levels for certain loggers.
-        if record.level().to_level_filter() >= *self.screen_level.lock() {
+        if record.level().to_level_filter() == LevelFilter::Trace {
+            // todo use screen level property at all?!
             return;
         }
 
         // now only log stuff, that should not pollute the screen too much.
 
         if let Some(logger) = inner.serial.as_mut() {
+            logger.log(record);
+        }
+
+        if let Some(logger) = inner.framebuffer.as_mut() {
             logger.log(record);
         }
     }

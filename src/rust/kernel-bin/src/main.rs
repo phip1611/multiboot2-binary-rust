@@ -29,7 +29,9 @@ mod error;
 mod kernelalloc;
 mod logger;
 mod sysinfo;
+mod uefi_gop_fb;
 
+use core::fmt::Write;
 use crate::error::BootError;
 use log::LevelFilter;
 use multiboot2::{BootInformation as Multiboot2Info, MbiLoadError};
@@ -37,6 +39,7 @@ use uefi::prelude::Boot;
 use uefi::table::SystemTable;
 use uefi::Handle;
 use crate::logger::LOGGER;
+use crate::uefi_gop_fb::UefiGopFramebuffer;
 // use uefi::proto::console::text::Color;
 
 /// This symbol is referenced in "start.S". It doesn't need the "pub"-keyword,
@@ -50,9 +53,15 @@ fn entry_rust(multiboot2_magic: u32, multiboot2_info_ptr: u32) -> ! {
     let multiboot2_info = get_multiboot2_info(multiboot2_magic, multiboot2_info_ptr)
         .expect("Multiboot2 information structure pointer must be valid!");
     log::info!("Valid Multiboot2 boot.");
-    let (uefi_image_handle, uefi_boot_system_table) = get_uefi_info(&multiboot2_info)
+
+    let (uefi_boot_system_table, uefi_image_handle) = get_uefi_info(&multiboot2_info)
         .expect("Can't fetch UEFI system table and UEFI image handle.");
     log::info!("UEFI system table and UEFI image handle valid.");
+
+    let mut uefi_fb = UefiGopFramebuffer::new(&uefi_boot_system_table).expect("No Framebuffer available!");
+    LOGGER.init_framebuffer_logger(uefi_fb.clone());
+    log::debug!("{:#?}", &uefi_boot_system_table);
+
 
     // Make s
 
