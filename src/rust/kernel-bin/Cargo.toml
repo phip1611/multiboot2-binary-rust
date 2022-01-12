@@ -19,8 +19,8 @@ x86 = "0.44.0"
 uefi = { features = ["logger"], path = "../../../../uefi-rs" }
 log = "0.4.14"
 x86_64 = "0.14.7"
-# multiboot2 = "0.12.2"
-multiboot2 = { path = "../../../../multiboot2-elf64/multiboot2" }
+multiboot2 = "0.13.1"
+# multiboot2 = { path = "../../../../multiboot2-elf64/multiboot2" }
 kernel-lib = { path = "../kernel-lib" }
 # useage as arrays but on stack; required to use core::fmt conveniently
 arrayvec = { version = "0.7.2", default-features = false }
