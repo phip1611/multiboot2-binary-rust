@@ -1,21 +1,26 @@
 //! Module for the UEFI frame buffer logger.
 
 use alloc::sync::Arc;
+use alloc::vec::Vec;
 use core::fmt::{Debug, Formatter, Write};
 use core::{ptr, slice};
-use font8x8::UnicodeFonts;
-use kernel_lib::mutex::SimpleMutex;
+use fontdue::{Font, FontSettings, Metrics};
+use kernel_lib::fakelock::FakeLock;
 use uefi::proto::console::gop::{
     FrameBuffer, GraphicsOutput, Mode, ModeInfo, PixelBitmask, PixelFormat,
 };
 use uefi::table::{Boot, SystemTable};
 use uefi::{Completion, ResultExt};
 
+static NOTO_SANS_REGULAR: &[u8] = include_bytes!("res/NotoSansMono-Regular.ttf");
+
 const PREFERRED_HEIGHT: usize = 768;
 const PREFERRED_WIDTH: usize = 1024;
 
 /// Additional vertical space between lines
-const LINE_SPACING: usize = 0;
+const LINE_SPACING: usize = 3;
+
+pub type RGB = (u8, u8, u8);
 
 /// Defines the framebuffer my kernel uses, that was initialized by the
 /// Graphics Output Protocol (GOP) of UEFI. This code is heavily inspired
@@ -28,14 +33,27 @@ pub struct UefiGopFramebuffer<'a> {
     // Graphics Mode used by UEFI framebuffer
     framebuffer_mode: ModeInfo,
 
-    // current write position
+    /// current write position
     x_pos: usize,
-    // current read position
+    /// current read position
     y_pos: usize,
+
+    font: fontdue::Font,
+
+    /// Current RGB color for font.
+    color: RGB,
+    /// Current font size.
+    font_size: usize,
 }
 
 impl<'a> UefiGopFramebuffer<'a> {
-    pub fn new(table: &SystemTable<Boot>) -> Result<Arc<SimpleMutex<Self>>, ()> {
+    /// Default color is white font on black ground.
+    const DEFAULT_FONT_COLOR: RGB = (255, 255, 255);
+
+    /// Default font size is 17px.
+    const DEFAULT_FONT_SIZE: usize = 17;
+
+    pub fn new(table: &SystemTable<Boot>) -> Result<Arc<FakeLock<Self>>, ()> {
         let gop = table
             .boot_services()
             .locate_protocol::<GraphicsOutput>()
@@ -58,6 +76,11 @@ impl<'a> UefiGopFramebuffer<'a> {
 
             x_pos: 0,
             y_pos: 0,
+
+            font: Font::from_bytes(NOTO_SANS_REGULAR, FontSettings::default()).map_err(|_| ())?,
+
+            color: Self::DEFAULT_FONT_COLOR,
+            font_size: Self::DEFAULT_FONT_SIZE,
         };
         obj.clear();
 
@@ -69,7 +92,7 @@ impl<'a> UefiGopFramebuffer<'a> {
             obj.pixel_format()
         );
 
-        Ok(Arc::new(SimpleMutex::new(obj)))
+        Ok(Arc::new(FakeLock::new(obj)))
     }
 
     // INTERNAL HELPERS
@@ -105,36 +128,61 @@ impl<'a> UefiGopFramebuffer<'a> {
         match c {
             '\n' => self.newline(),
             '\r' => self.carriage_return(),
+            ' ' => {
+                self.x_pos += 10;
+                return;
+            }
             c => {
-                if self.x_pos >= self.width() {
+                if self.x_pos + self.font_size >= self.width() {
                     self.newline();
                 }
-                if self.y_pos >= (self.height() - 8) {
+                if self.y_pos >= (self.height() - self.font_size - 5) {
                     self.clear();
                 }
-                let rendered = font8x8::BASIC_FONTS
-                    .get(c)
-                    .expect("character not found in basic font");
-                self.write_rendered_char(rendered);
+                let (metrics, raster) = self.font.rasterize(c, self.font_size as f32);
+                self.write_rendered_char(raster.as_slice(), &metrics);
             }
         }
     }
 
-    fn write_rendered_char(&mut self, rendered_char: [u8; 8]) {
-        for (y, byte) in rendered_char.iter().enumerate() {
-            for (x, bit) in (0..8).enumerate() {
-                let alpha = if *byte & (1 << bit) == 0 { 0 } else { 255 };
-                self.write_pixel(self.x_pos + x, self.y_pos + y, alpha);
-            }
+    fn write_rendered_char(&mut self, rendered_char: &[u8], metrics: &Metrics) {
+        let offset = metrics.bounds.height as isize - self.font_size as isize;
+        let offset = offset + metrics.bounds.ymin as isize;
+        for ((p_row, p_col), opacity) in rendered_char.iter().enumerate().map(|(i, p)| {
+            let p_row = i / metrics.width;
+            let p_col = i % metrics.width;
+            ((p_row, p_col), p)
+        }) {
+            let rgb = (*opacity as u8, *opacity as u8, *opacity as u8);
+
+            /*{
+                let mut port = unsafe { uart_16550::SerialPort::new(0x3f8) };
+                writeln!(
+                    &mut port,
+                    "metrics.height = {}, self.y_pos {}. p_row = {} offset = {}",
+                    metrics.height, self.y_pos, p_row, offset
+                )
+                .unwrap();
+            }*/
+
+            let x_pos = self.x_pos + p_col;
+            let y_pos = (self.y_pos as isize + p_row as isize - offset);
+            let y_pos = if { y_pos < 0 } { 0 } else { y_pos as usize };
+
+            self.write_pixel(x_pos, y_pos, rgb);
         }
-        self.x_pos += 8;
+
+        self.x_pos += metrics.width + 1;
     }
 
-    fn write_pixel(&mut self, x: usize, y: usize, intensity: u8) {
+    fn write_pixel(&mut self, x: usize, y: usize, rgb: RGB) {
+        //assert!(x <= self.width(), "width exceeded");
+        //assert!(y <= self.height(), "height exceeded!");
+
         let pixel_offset = y * self.stride() + x;
         let color = match self.pixel_format() {
-            PixelFormat::Rgb => [intensity, intensity, intensity, 0],
-            PixelFormat::Bgr => [intensity, intensity, intensity, 0],
+            PixelFormat::Rgb => [rgb.0, rgb.1, rgb.2, 0],
+            PixelFormat::Bgr => [rgb.2, rgb.1, rgb.0, 0],
             _ => panic!("invalid pixel format"),
         };
         let bytes_per_pixel = self.bytes_per_pixel();
@@ -145,7 +193,7 @@ impl<'a> UefiGopFramebuffer<'a> {
     }
 
     fn newline(&mut self) {
-        self.y_pos += 8 + LINE_SPACING;
+        self.y_pos += self.font_size + LINE_SPACING;
         self.carriage_return()
     }
 

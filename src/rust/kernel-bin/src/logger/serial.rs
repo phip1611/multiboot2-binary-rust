@@ -4,7 +4,7 @@ use uart_16550::SerialPort;
 
 /// Implementation of a logger for the [`log`] crate, that writes everything to
 /// the serial device of the platform. This device is also called "COM1" and is a
-/// 16550 UART device behind I/O port 0x38f under the hood on almost any mainboard
+/// 16550 UART device behind I/O port 0x3f8 under the hood on almost any mainboard
 /// by convention.
 pub struct SerialLogger {
     port: SerialPort,

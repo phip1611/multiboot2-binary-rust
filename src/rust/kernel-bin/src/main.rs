@@ -26,6 +26,7 @@ extern crate alloc;
 #[macro_use]
 mod panic;
 mod error;
+mod f32_compat;
 mod kernelheap;
 mod logger;
 mod sysinfo;

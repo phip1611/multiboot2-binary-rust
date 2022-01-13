@@ -3,8 +3,9 @@ use crate::logger::qemu_debugcon::QemuDebugconLogger;
 use crate::logger::serial::SerialLogger;
 use crate::UefiGopFramebuffer;
 use alloc::sync::Arc;
+use core::fmt::Write;
 use core::sync::atomic::{AtomicBool, Ordering};
-use kernel_lib::mutex::SimpleMutex;
+use kernel_lib::fakelock::FakeLock;
 use log::{LevelFilter, Log, Metadata, Record};
 use runs_inside_qemu::runs_inside_qemu;
 
@@ -24,16 +25,17 @@ pub struct LoggerFacade<'a> {
     /// Level for log messages that get logged to screen instead of a file.
     /// Usually, we don't want to pollute the screen but keep all log messages
     /// in a file.
-    screen_level: SimpleMutex<LevelFilter>,
-    inner: SimpleMutex<Loggers<'a>>,
+    screen_level: FakeLock<LevelFilter>,
+    inner: FakeLock<Loggers<'a>>,
 }
 
 impl<'a> LoggerFacade<'a> {
     const fn new() -> Self {
         Self {
             init_done: AtomicBool::new(false),
-            screen_level: SimpleMutex::new(LevelFilter::Trace),
-            inner: SimpleMutex::new(Loggers::new()),
+            screen_level: FakeLock::new(LevelFilter::Trace),
+            // inner: SimpleMutex::new(Loggers::new()),
+            inner: FakeLock::new(Loggers::new()),
         }
     }
 
@@ -49,18 +51,22 @@ impl<'a> LoggerFacade<'a> {
         log::info!("KernelLogger init done");
     }
 
-    pub fn init_framebuffer_logger(&self, framebuffer: Arc<SimpleMutex<UefiGopFramebuffer<'a>>>) {
-        let mut inner = self.inner.lock();
+    // pub fn init_framebuffer_logger(&self, framebuffer: Arc<SimpleMutex<UefiGopFramebuffer<'a>>>) {
+    pub fn init_framebuffer_logger(&self, framebuffer: Arc<FakeLock<UefiGopFramebuffer<'a>>>) {
+        // let mut inner = self.inner.lock();
+        let mut inner = self.inner.get_mut();
         inner.init_framebuffer(FramebufferLogger::new(framebuffer))
     }
 
     /// Sets the level of messages that should be logged to the screen.
     pub fn set_screen_level(&self, level: LevelFilter) {
-        *self.screen_level.lock() = level;
+        // *self.screen_level.lock() = level;
+        *self.screen_level.get_mut() = level;
     }
 
     fn init_self(&self, screen_level: LevelFilter) {
-        let mut inner = self.inner.lock();
+        // let mut inner = self.inner.lock();
+        let mut inner = self.inner.get_mut();
         inner.init();
 
         self.set_screen_level(screen_level);
@@ -110,11 +116,14 @@ impl<'a> Loggers<'a> {
 impl<'a> Log for LoggerFacade<'a> {
     fn enabled(&self, metadata: &Metadata) -> bool {
         // TODO: When is this getting called?!
-        metadata.level().to_level_filter() >= *self.screen_level.lock()
+        // metadata.level().to_level_filter() >= *self.screen_level.lock()
+        metadata.level().to_level_filter() >= *self.screen_level.get()
     }
 
     fn log(&self, record: &Record) {
-        let mut inner = self.inner.lock();
+        // TODO deadlock, when nested exception!
+        // let mut inner = self.inner.lock();
+        let mut inner = self.inner.get_mut();
 
         // QEMU_DEBUGCON: log everything @ trace level, because I log this
         // into a file instead of polluting the screen or the framebuffer.
