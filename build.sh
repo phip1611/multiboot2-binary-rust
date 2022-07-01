@@ -30,7 +30,7 @@ function fn_copy_bin() {
   # symlink doesn't work, when GRUB makes a standalone image
   # ln -s "$(pwd)/src/rust/rust-kernel/target/x86_64-none-bare_metal/debug/rust-multiboot2-64-bit-kernel" \
   # "${BUILD_DIR}/multiboot2-kernel_x86_64.elf"
-  cp "$(pwd)/src/rust/kernel-bin/target/x86_64-none-bare_metal/debug/kernel-bin" \
+  cp "$(pwd)/target/x86_64-none-bare_metal/debug/kernel-bin" \
    "${BUILD_DIR}/multiboot2-kernel_x86_64.elf"
 }
 
