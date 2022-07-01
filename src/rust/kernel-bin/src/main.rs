@@ -60,7 +60,6 @@ fn entry_rust(multiboot2_magic: u32, multiboot2_info_ptr: u32) -> ! {
     let multiboot2_info = get_multiboot2_info(multiboot2_magic, multiboot2_info_ptr)
         .expect("Multiboot2 information structure pointer must be valid!");
 
-
     let (uefi_boot_system_table, uefi_image_handle) = get_uefi_info(&multiboot2_info)
         .expect("Can't fetch UEFI system table and UEFI image handle.");
     log::info!("UEFI system table and UEFI image handle valid.");

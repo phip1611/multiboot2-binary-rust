@@ -10,6 +10,12 @@ set -x
 DIR=$(dirname "$(realpath "$0")")
 cd "$DIR" || exit
 
+export CARGO_TARGET_DIR=$PWD/../../target
+
+# nice "hack" which make the script work, even if not executed from "./"
+DIR=$(dirname "$(realpath "$0")")
+cd "$DIR" || exit
+
 # libs are regular no_std custom libs, that are not specific to a target
 # We develop them as we would use them on the host platform. This makes test
 # execution easier (as long as https://github.com/rust-lang/cargo/issues/9710 exists).
@@ -24,7 +30,7 @@ do
      cd "$LIB" || exit
      cargo build
      cargo test
-     cargo fmt -- --check
+     cargo +stable fmt -- --check
    )
 done
 
@@ -41,7 +47,7 @@ do
    (
      cd "$BIN" || exit
      cargo build
-     cargo fmt -- --check
+     cargo +stable fmt -- --check
      # tests don't work so far
      # cargo test --target x86_64-unknown-linux-gnu
    )
