@@ -38,7 +38,9 @@
 
         # This is different to nasm, where the symbol address would be used
         # by default as immediate.
-        movabs      rax,    OFFSET _initial_stack_top
+        mov         rax,    0xdeadbeef
+        lea         rax,    [rip - _initial_stack_top]
+        #movabs      rax,    OFFSET _initial_stack_top
         # _initial_stack_top is 16 byte aligned but exclusive -> get next lower aligned address
         sub         rax,    16
         # x86-thingy: the stack pointer minus eight must be correctly aligned

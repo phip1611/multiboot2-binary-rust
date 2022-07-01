@@ -1,6 +1,6 @@
 /*
- * Custom linker script for the `cargo` build.
- * Makes sure the multiboot2-header is at the beginning of the file.
+ * Custom linker script for the kernel build. Used by cargo.
+ * Makes sure the multiboot2-header is at the beginning of the final ELF file.
  */
 
 /** The "start"-symbol from start.S. */
@@ -18,15 +18,9 @@ SECTIONS {
     /* Multiboot2-Header must be 64-bit (8 byte) aligned according to spec. */
     . = ALIGN(8);
 
-    /* this fails because of: https://stackoverflow.com/questions/68475415/ */
-    /*.multiboot2_header :
-    {
-
-    }*/
-
     .text . :
     {
-        /* temporary workaround https://stackoverflow.com/questions/68475415/ */
+        /* This way we get the multiboot2 header at the beginning of the ELF file; see https://stackoverflow.com/questions/68475415/ */
         *(.multiboot2_header)
         *(.text .text.*)
     }
