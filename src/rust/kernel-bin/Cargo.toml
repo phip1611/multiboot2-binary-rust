@@ -12,18 +12,18 @@ publish = false
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [profile.dev]
-# otherwise TTF rendering is REALLY slow
+# accelerates code startup by noticable amount
 opt-level = 1
 
 [dependencies]
 x86 = "0.44.0"
 # uefi = { version = "0.13.0", features = ["logger"] }
-uefi = { features = ["logger"], git = "https://github.com/phip1611/uefi-rs.git", rev = "6ba5feb10a69f9ba9a443b71d6d37932c1410a51" }
-# uefi = { features = ["logger"], path = "../../../../uefi-rs" }
+# uefi = { features = ["logger"], git = "https://github.com/phip1611/uefi-rs.git", rev = "6ba5feb10a69f9ba9a443b71d6d37932c1410a51" }
+uefi = { features = ["logger"], path = "../../../../uefi-rs" }
 log = "0.4.14"
 x86_64 = "0.14.7"
 multiboot2 = "0.13.1"
-# multiboot2 = { path = "../../../../multiboot2-elf64/multiboot2" }
+# multiboot2 = { path = "../../../../multiboot2-rs/multiboot2" }
 kernel-lib = { path = "../kernel-lib" }
 # useage as arrays but on stack; required to use core::fmt conveniently
 arrayvec = { version = "0.7.2", default-features = false }
@@ -31,4 +31,4 @@ arrayvec = { version = "0.7.2", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["display"] }
 runs_inside_qemu = "1.2.1"
 uart_16550 = "0.2.16"
-fontdue = { version = "0.6.2", features = ["disable_simd"] }
+noto-sans-mono-bitmap = "0.1.5"

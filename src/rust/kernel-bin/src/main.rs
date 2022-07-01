@@ -36,11 +36,14 @@ use crate::error::BootError;
 use crate::logger::LOGGER;
 use crate::sysinfo::SysInfo;
 use crate::uefi_gop_fb::UefiGopFramebuffer;
+use alloc::string::String;
 use core::{mem, slice};
 use log::LevelFilter;
 use multiboot2::{BootInformation as Multiboot2Info, MbiLoadError};
+use noto_sans_mono_bitmap::{get_bitmap, BitmapHeight, FontWeight};
 use uefi::prelude::Boot;
-use uefi::table::boot::{MemoryDescriptor, MemoryType};
+use uefi::proto::media::fs::SimpleFileSystem;
+use uefi::table::boot::{MemoryDescriptor, MemoryType, OpenProtocolParams};
 use uefi::table::{Runtime, SystemTable};
 use uefi::Handle;
 // use uefi::proto::console::text::Color;
@@ -56,7 +59,7 @@ fn entry_rust(multiboot2_magic: u32, multiboot2_info_ptr: u32) -> ! {
 
     let multiboot2_info = get_multiboot2_info(multiboot2_magic, multiboot2_info_ptr)
         .expect("Multiboot2 information structure pointer must be valid!");
-    log::info!("Valid Multiboot2 boot.");
+
 
     let (uefi_boot_system_table, uefi_image_handle) = get_uefi_info(&multiboot2_info)
         .expect("Can't fetch UEFI system table and UEFI image handle.");
@@ -65,6 +68,39 @@ fn entry_rust(multiboot2_magic: u32, multiboot2_info_ptr: u32) -> ! {
     let uefi_fb =
         UefiGopFramebuffer::new(&uefi_boot_system_table).expect("No Framebuffer available!");
     LOGGER.init_framebuffer_logger(uefi_fb.clone());
+
+    let fs = uefi_boot_system_table
+        .boot_services()
+        .locate_protocol::<SimpleFileSystem>()
+        .unwrap()
+        .unwrap();
+    let fs = unsafe { &mut *fs.get() };
+    // TODO: not sure what will be inside buf; is there already a type for that in the UEFI crate?
+    let mut buf = [0; 4096];
+    let mut dir = fs.open_volume().unwrap().unwrap();
+    let res = dir.read_entry(&mut buf).unwrap().unwrap().unwrap();
+    log::debug!("{:#?}", res);
+
+    log::debug!("Valid Multiboot2 boot.");
+    log::debug!(
+        "{}",
+        multiboot2_info
+            .boot_loader_name_tag()
+            .unwrap()
+            .name()
+            .unwrap()
+    );
+    log::debug!(
+        "{}",
+        multiboot2_info
+            .command_line_tag()
+            .unwrap()
+            .command_line()
+            .unwrap()
+    );
+    for tag in multiboot2_info.module_tags() {
+        log::debug!("{}", tag.cmdline().unwrap());
+    }
 
     let (uefi_rt_system_table, _uefi_memory_map) =
         exit_uefi_boot_services(uefi_boot_system_table, uefi_image_handle)

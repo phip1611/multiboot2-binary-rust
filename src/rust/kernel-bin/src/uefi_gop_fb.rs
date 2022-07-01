@@ -4,21 +4,19 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::fmt::{Debug, Formatter, Write};
 use core::{ptr, slice};
-use fontdue::{Font, FontSettings, Metrics};
 use kernel_lib::fakelock::FakeLock;
+use noto_sans_mono_bitmap::{get_bitmap, BitmapChar, BitmapHeight, FontWeight};
 use uefi::proto::console::gop::{
     FrameBuffer, GraphicsOutput, Mode, ModeInfo, PixelBitmask, PixelFormat,
 };
 use uefi::table::{Boot, SystemTable};
 use uefi::{Completion, ResultExt};
 
-static NOTO_SANS_REGULAR: &[u8] = include_bytes!("res/NotoSansMono-Regular.ttf");
-
 const PREFERRED_HEIGHT: usize = 768;
 const PREFERRED_WIDTH: usize = 1024;
 
-/// Additional vertical space between lines
-const LINE_SPACING: usize = 3;
+/// Additional vertical space between lines in px.
+const LINE_SPACING: usize = 2;
 
 pub type RGB = (u8, u8, u8);
 
@@ -38,20 +36,18 @@ pub struct UefiGopFramebuffer<'a> {
     /// current read position
     y_pos: usize,
 
-    font: fontdue::Font,
-
     /// Current RGB color for font.
     color: RGB,
     /// Current font size.
-    font_size: usize,
+    bitmap_font_height: usize,
 }
 
 impl<'a> UefiGopFramebuffer<'a> {
     /// Default color is white font on black ground.
     const DEFAULT_FONT_COLOR: RGB = (255, 255, 255);
 
-    /// Default font size is 17px.
-    const DEFAULT_FONT_SIZE: usize = 17;
+    /// Default font size is 16px.
+    const DEFAULT_FONT_SIZE: usize = 18;
 
     pub fn new(table: &SystemTable<Boot>) -> Result<Arc<FakeLock<Self>>, ()> {
         let gop = table
@@ -77,10 +73,8 @@ impl<'a> UefiGopFramebuffer<'a> {
             x_pos: 0,
             y_pos: 0,
 
-            font: Font::from_bytes(NOTO_SANS_REGULAR, FontSettings::default()).map_err(|_| ())?,
-
             color: Self::DEFAULT_FONT_COLOR,
-            font_size: Self::DEFAULT_FONT_SIZE,
+            bitmap_font_height: Self::DEFAULT_FONT_SIZE,
         };
         obj.clear();
 
@@ -128,51 +122,36 @@ impl<'a> UefiGopFramebuffer<'a> {
         match c {
             '\n' => self.newline(),
             '\r' => self.carriage_return(),
-            ' ' => {
+            // also covered by bitmap font
+            /*' ' => {
                 self.x_pos += 10;
                 return;
-            }
+            }*/
             c => {
-                if self.x_pos + self.font_size >= self.width() {
+                if self.x_pos + self.bitmap_font_height >= self.width() {
                     self.newline();
                 }
-                if self.y_pos >= (self.height() - self.font_size - 5) {
+                if self.y_pos >= (self.height() - self.bitmap_font_height - 5) {
                     self.clear();
                 }
-                let (metrics, raster) = self.font.rasterize(c, self.font_size as f32);
-                self.write_rendered_char(raster.as_slice(), &metrics);
+                let get_bitmap_fn = |c| get_bitmap(c, FontWeight::Regular, BitmapHeight::Size18);
+                let bitmap = get_bitmap_fn(c).unwrap_or(get_bitmap_fn(' ').unwrap());
+                self.write_rendered_char(bitmap);
             }
         }
     }
 
-    fn write_rendered_char(&mut self, rendered_char: &[u8], metrics: &Metrics) {
-        let offset = metrics.bounds.height as isize - self.font_size as isize;
-        let offset = offset + metrics.bounds.ymin as isize;
-        for ((p_row, p_col), opacity) in rendered_char.iter().enumerate().map(|(i, p)| {
-            let p_row = i / metrics.width;
-            let p_col = i % metrics.width;
-            ((p_row, p_col), p)
-        }) {
-            let rgb = (*opacity as u8, *opacity as u8, *opacity as u8);
-
-            /*{
-                let mut port = unsafe { uart_16550::SerialPort::new(0x3f8) };
-                writeln!(
-                    &mut port,
-                    "metrics.height = {}, self.y_pos {}. p_row = {} offset = {}",
-                    metrics.height, self.y_pos, p_row, offset
-                )
-                .unwrap();
-            }*/
-
-            let x_pos = self.x_pos + p_col;
-            let y_pos = (self.y_pos as isize + p_row as isize - offset);
-            let y_pos = if { y_pos < 0 } { 0 } else { y_pos as usize };
-
-            self.write_pixel(x_pos, y_pos, rgb);
+    fn write_rendered_char(&mut self, rendered_char: BitmapChar) {
+        for (row_i, row) in rendered_char.bitmap().iter().enumerate() {
+            for (col_i, opacity) in row.iter().enumerate() {
+                let x_pos = self.x_pos + col_i;
+                let y_pos = self.y_pos + row_i;
+                let rgb = (*opacity as u8, *opacity as u8, *opacity as u8);
+                self.write_pixel(x_pos, y_pos, rgb);
+            }
         }
 
-        self.x_pos += metrics.width + 1;
+        self.x_pos += rendered_char.width();
     }
 
     fn write_pixel(&mut self, x: usize, y: usize, rgb: RGB) {
@@ -193,7 +172,8 @@ impl<'a> UefiGopFramebuffer<'a> {
     }
 
     fn newline(&mut self) {
-        self.y_pos += self.font_size + LINE_SPACING;
+        // self.font_size already includes vertical padding
+        self.y_pos += self.bitmap_font_height + LINE_SPACING;
         self.carriage_return()
     }
 
