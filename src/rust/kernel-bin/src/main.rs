@@ -26,24 +26,20 @@ extern crate alloc;
 #[macro_use]
 mod panic;
 mod error;
-mod f32_compat;
 mod kernelheap;
 mod logger;
 mod sysinfo;
-mod uefi_gop_fb;
+// mod uefi_gop_fb;
 
 use crate::error::BootError;
 use crate::logger::LOGGER;
 use crate::sysinfo::SysInfo;
-use crate::uefi_gop_fb::UefiGopFramebuffer;
-use alloc::string::String;
+// use crate::uefi_gop_fb::UefiGopFramebuffer;
 use core::{mem, slice};
 use log::LevelFilter;
 use multiboot2::{BootInformation as Multiboot2Info, MbiLoadError};
-use noto_sans_mono_bitmap::{get_bitmap, BitmapHeight, FontWeight};
 use uefi::prelude::Boot;
-use uefi::proto::media::fs::SimpleFileSystem;
-use uefi::table::boot::{MemoryDescriptor, MemoryType, OpenProtocolParams};
+use uefi::table::boot::{MemoryDescriptor, MemoryType};
 use uefi::table::{Runtime, SystemTable};
 use uefi::Handle;
 // use uefi::proto::console::text::Color;
@@ -64,7 +60,7 @@ fn entry_rust(multiboot2_magic: u32, multiboot2_info_ptr: u32) -> ! {
         .expect("Can't fetch UEFI system table and UEFI image handle.");
     log::info!("UEFI system table and UEFI image handle valid.");
 
-    let uefi_fb =
+    /*let uefi_fb =
         UefiGopFramebuffer::new(&uefi_boot_system_table).expect("No Framebuffer available!");
     LOGGER.init_framebuffer_logger(uefi_fb.clone());
 
@@ -78,7 +74,7 @@ fn entry_rust(multiboot2_magic: u32, multiboot2_info_ptr: u32) -> ! {
     let mut buf = [0; 4096];
     let mut dir = fs.open_volume().unwrap().unwrap();
     let res = dir.read_entry(&mut buf).unwrap().unwrap().unwrap();
-    log::debug!("{:#?}", res);
+    log::debug!("{:#?}", res);*/
 
     log::debug!("Valid Multiboot2 boot.");
     log::debug!(
@@ -166,16 +162,11 @@ fn exit_uefi_boot_services<'a>(
         let ptr = table
             .boot_services()
             .allocate_pool(MemoryType::LOADER_DATA, max_mmap_size)
-            .map_err(|_| ())?
-            .log();
+            .map_err(|_| ())?;
         unsafe { slice::from_raw_parts_mut(ptr, max_mmap_size) }
     };
 
-    let uefi_rt_system_table = table
-        .exit_boot_services(handle, mmap_storage)
-        .unwrap()
-        .unwrap()
-        .0;
+    let uefi_rt_system_table = table.exit_boot_services(handle, mmap_storage).unwrap().0;
 
     Ok((uefi_rt_system_table, mmap_storage))
 }

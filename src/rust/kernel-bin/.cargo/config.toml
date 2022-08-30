@@ -1,7 +1,15 @@
-[unstable]
-build-std = ["core", "compiler_builtins", "alloc"]
-build-std-features = ["compiler-builtins-mem"]
-
 [build]
-# points to file in project root
-target = "x86_64-none-bare_metal.json"
+# common shared target dir in project root
+target-dir = "../../../target/"
+# target is a compiler built-in
+target = "x86_64-unknown-none"
+
+rustflags = [
+    "-C", "link-arg=-Tlink.ld",
+
+    # The default of the x86_64-unknown-none built-in Rust compiler target is "pic".
+    # See: https://github.com/rust-lang/rust/blob/1.62.1/compiler/rustc_target/src/spec/x86_64_unknown_none.rs
+    # However, I need a static ELF binary here because GRUB can not load relocatable ELF binaries.
+    "-C",
+    "relocation-model=static"
+]

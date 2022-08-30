@@ -5,5 +5,3 @@
 # Rust nightly 1.64
 channel = "nightly-2022-06-30"
 components = [ "rust-src", "rust-std", "rustc", "cargo" ]
-# currently still without effect as there is no precompiled libcore for thie target
-targets = [ "x86_64-unknown-none" ]

@@ -1,7 +1,7 @@
 use arrayvec::ArrayString;
 use core::fmt::Debug;
 use core::str::FromStr;
-use uefi::prelude::{Boot, SystemTable};
+use uefi::prelude::SystemTable;
 use uefi::table::{Revision, Runtime};
 use x86::cpuid::{CpuId, ExtendedFeatures, FeatureInfo, HypervisorInfo};
 

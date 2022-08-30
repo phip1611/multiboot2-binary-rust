@@ -1,15 +1,14 @@
-use crate::logger::fb_logger::FramebufferLogger;
+// use crate::logger::fb_logger::FramebufferLogger;
 use crate::logger::qemu_debugcon::QemuDebugconLogger;
 use crate::logger::serial::SerialLogger;
-use crate::UefiGopFramebuffer;
-use alloc::sync::Arc;
-use core::fmt::Write;
+// use crate::UefiGopFramebuffer;
+use core::marker::PhantomData;
 use core::sync::atomic::{AtomicBool, Ordering};
 use kernel_lib::fakelock::FakeLock;
 use log::{LevelFilter, Log, Metadata, Record};
 use runs_inside_qemu::runs_inside_qemu;
 
-mod fb_logger;
+// mod fb_logger;
 mod qemu_debugcon;
 mod serial;
 
@@ -26,7 +25,7 @@ pub struct LoggerFacade<'a> {
     /// Usually, we don't want to pollute the screen but keep all log messages
     /// in a file.
     screen_level: FakeLock<LevelFilter>,
-    inner: FakeLock<Loggers<'a>>,
+    inner: FakeLock<Option<Loggers<'a>>>,
 }
 
 impl<'a> LoggerFacade<'a> {
@@ -35,7 +34,7 @@ impl<'a> LoggerFacade<'a> {
             init_done: AtomicBool::new(false),
             screen_level: FakeLock::new(LevelFilter::Trace),
             // inner: SimpleMutex::new(Loggers::new()),
-            inner: FakeLock::new(Loggers::new()),
+            inner: FakeLock::new(None),
         }
     }
 
@@ -45,6 +44,7 @@ impl<'a> LoggerFacade<'a> {
             "logger may only be initialized once!"
         );
 
+        self.inner.get_mut().replace(Loggers::new());
         self.init_self(screen_level);
         self.init_generic();
 
@@ -52,11 +52,11 @@ impl<'a> LoggerFacade<'a> {
     }
 
     // pub fn init_framebuffer_logger(&self, framebuffer: Arc<SimpleMutex<UefiGopFramebuffer<'a>>>) {
-    pub fn init_framebuffer_logger(&self, framebuffer: Arc<FakeLock<UefiGopFramebuffer<'a>>>) {
+    /*pub fn init_framebuffer_logger(&self, framebuffer: Arc<FakeLock<UefiGopFramebuffer<'a>>>) {
         // let mut inner = self.inner.lock();
         let mut inner = self.inner.get_mut();
         inner.init_framebuffer(FramebufferLogger::new(framebuffer))
-    }
+    }*/
 
     /// Sets the level of messages that should be logged to the screen.
     pub fn set_screen_level(&self, level: LevelFilter) {
@@ -66,8 +66,8 @@ impl<'a> LoggerFacade<'a> {
 
     fn init_self(&self, screen_level: LevelFilter) {
         // let mut inner = self.inner.lock();
-        let mut inner = self.inner.get_mut();
-        inner.init();
+        let inner = self.inner.get_mut();
+        inner.as_mut().unwrap().init();
 
         self.set_screen_level(screen_level);
 
@@ -89,15 +89,17 @@ impl<'a> LoggerFacade<'a> {
 struct Loggers<'a> {
     qemu_debugcon: Option<QemuDebugconLogger>,
     serial: Option<SerialLogger>,
-    framebuffer: Option<FramebufferLogger<'a>>,
+    // framebuffer: Option<FramebufferLogger<'a>>,
+    _foo: PhantomData<&'a ()>,
 }
 
 impl<'a> Loggers<'a> {
-    const fn new() -> Self {
+    fn new() -> Self {
         Self {
             qemu_debugcon: None,
             serial: None,
-            framebuffer: None,
+            // framebuffer: None,
+            _foo: PhantomData::default(),
         }
     }
 
@@ -108,9 +110,9 @@ impl<'a> Loggers<'a> {
         }
     }
 
-    fn init_framebuffer(&mut self, framebuffer: FramebufferLogger<'a>) {
+    /*fn init_framebuffer(&mut self, framebuffer: FramebufferLogger<'a>) {
         self.framebuffer.replace(framebuffer);
-    }
+    }*/
 }
 
 impl<'a> Log for LoggerFacade<'a> {
@@ -123,7 +125,8 @@ impl<'a> Log for LoggerFacade<'a> {
     fn log(&self, record: &Record) {
         // TODO deadlock, when nested exception!
         // let mut inner = self.inner.lock();
-        let mut inner = self.inner.get_mut();
+        let inner = self.inner.get_mut();
+        let inner = inner.as_mut().unwrap();
 
         // QEMU_DEBUGCON: log everything @ trace level, because I log this
         // into a file instead of polluting the screen or the framebuffer.
@@ -145,9 +148,9 @@ impl<'a> Log for LoggerFacade<'a> {
             logger.log(record);
         }
 
-        if let Some(logger) = inner.framebuffer.as_mut() {
+        /*if let Some(logger) = inner.framebuffer.as_mut() {
             logger.log(record);
-        }
+        }*/
     }
 
     fn flush(&self) {

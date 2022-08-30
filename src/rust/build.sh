@@ -10,11 +10,7 @@ set -x
 DIR=$(dirname "$(realpath "$0")")
 cd "$DIR" || exit
 
-export CARGO_TARGET_DIR=$PWD/../../target
 
-# nice "hack" which make the script work, even if not executed from "./"
-DIR=$(dirname "$(realpath "$0")")
-cd "$DIR" || exit
 
 # libs are regular no_std custom libs, that are not specific to a target
 # We develop them as we would use them on the host platform. This makes test

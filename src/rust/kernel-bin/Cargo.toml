@@ -16,10 +16,10 @@ publish = false
 opt-level = 1
 
 [dependencies]
-x86 = "0.50.0"
-# uefi = { version = "0.13.0", features = ["logger"] }
+x86 = "0.51.0"
+uefi = { version = "=0.16.1", features = ["logger"] }
 # uefi = { features = ["logger"], git = "https://github.com/phip1611/uefi-rs.git", rev = "6ba5feb10a69f9ba9a443b71d6d37932c1410a51" }
-uefi = { features = ["logger"], path = "../../../../uefi-rs" }
+# uefi = { features = ["logger"], path = "../../../../uefi-rs" }
 log = "0.4.14"
 x86_64 = "0.14.7"
 multiboot2 = "0.14.0"

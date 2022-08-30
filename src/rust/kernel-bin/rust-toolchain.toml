@@ -2,8 +2,6 @@
 # https://rust-lang.github.io/rustup/overrides.html
 
 [toolchain]
-# Rust nightly 1.64
-channel = "nightly-2022-06-30"
-components = [ "rust-src", "rust-std", "rustc", "cargo" ]
-# currently still without effect as there is no precompiled libcore for thie target
+# Rust nightly 1.65
+channel = "nightly-2022-08-22"
 targets = [ "x86_64-unknown-none" ]
