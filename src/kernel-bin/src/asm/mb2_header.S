@@ -1,14 +1,10 @@
-# The ability of Rust to include global assembly is poorly documented.
-# It uses GAS (GNU Assembly) syntax
+# Specifies the Multiboot2 header.
+# Uses GAS-like syntax in intel noprefix mode (the default for Rust assembly).
 
-# is already the default
-# . intel_syntax noprefix
-
-.code64
 # entry point into start routine (start.S)
-.EXTERN start
+.extern entry_mb2_64_bit_efi
 
-.ALIGN 8 # according to spec, the header must be 64-bit (8 byte) aligned
+.align 8 # according to spec, the header must be 64-bit (8 byte) aligned
 .section .multiboot2_header
 
     mb2_header_start:
@@ -19,7 +15,7 @@
         #   checksum
         .LONG  0x100000000 - (0xe85250d6 + 0 + (mb2_header_end - mb2_header_start))
 
-        # OPTIONAL MULTIBOOT2 TAGS (additional to required END TAG)
+        # OPTIONAL MULTIBOOT2 TAGS
         # In order to boot into "EFI amd64 machine state with boot services enabled" (3.5 in Spec, 2021-06)
         # machine state, we must specify a few additional tags:
         #
@@ -32,7 +28,8 @@
             .LONG  .Lmb2_header_tag_ebs_end - .Lmb2_header_tag_ebs_start       # size  (32bit)
         .Lmb2_header_tag_ebs_end:
         # ------------------------------------------------------------------------------------
-        # "EFI amd64 entry address tag of Multiboot2 header"-tag
+        # "EFI i386 entry address tag of Multiboot2 header"-tag
+        # If we boot on BIOS, this is... TODO ignored?
         .ALIGN 8
         .Lmb2_header_tag_efiamd64_start:
             .WORD  9       # type  (16bit)
@@ -41,7 +38,7 @@
             # Address to jump to.
             #  GRUB source code: https://github.com/rhboot/grub2/blob/a53e530f8ad3770c3b03c208c08ae4162f68e3b1/grub-core/loader/multiboot_mbi2.c#L212
             # According to MB2 spec, this has a higher precedence, than the regular start-symbol from the ELF.
-            .LONG  start   # entry_addr (32bit)
+            .LONG entry_mb2_64_bit_efi # entry_addr (32bit)
         .Lmb2_header_tag_efiamd64_end:
         # ------------------------------------------------------------------------------------
         # "Relocatable"-tag
@@ -52,10 +49,10 @@
         #    .LONG  .Lmb2_header_tag_relocatable_end - .Lmb2_header_tag_relocatable_start   # size  (32bit)
         #    # According to spec, this has a higher precedence, than the regular start-symbol from the ELF.
         #    .LONG  0x100000    # lowest possible address (8MiB)
-        #    .LONG  0xffffffff  # highest possible address (4GiB)
-        #    .LONG  4096        # alignment
+        #    .LONG  0x0fffffff  # highest possible address (4GiB - enough space for kernel)
+        #    .LONG  0x200000    # alignment (2 MiB to enable super pages)
         #    .LONG  0           # preference: 0 (none), 1 (lowest possible), 2 (highest possible)
-        #.Lmb2_header_tag_relocatable_end:
+        .Lmb2_header_tag_relocatable_end:
         # ------------------------------------------------------------------------------------
         # REQUIRED END TAG
         .ALIGN 8

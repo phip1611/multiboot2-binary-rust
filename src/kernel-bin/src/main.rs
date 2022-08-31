@@ -14,17 +14,14 @@
 #![feature(panic_info_message)]
 #![deny(missing_debug_implementations)]
 
-core::arch::global_asm!(include_str!("start.S"));
-core::arch::global_asm!(include_str!("multiboot2_header.S"));
-
 // ONLY USE ALLOCATIONS WHEN AN ALLOCATOR WAS SET UP!
-#[allow(unused)]
 #[macro_use]
 extern crate alloc;
 
 // macro use must be above other module, otherwise the macro is not available in these modules
 #[macro_use]
 mod panic;
+mod asm;
 mod error;
 mod kernelheap;
 mod logger;

@@ -13,13 +13,7 @@ cd "$DIR" || exit
 # + additional config files for grub and more (if necessary)
 QEMU_DIR="./qemu"
 QEMU_VOLUME_DIR="${QEMU_DIR}/.vm-volume"
-
-# location of OVMF files if `ovmf` package is installed (at least on debian/ubuntu)
-OVMF_SYSTEM_PATH="/usr/share/OVMF"
-# files are here after 'fn_prepare_ovmf`
-OVMF_FW_PATH="${QEMU_DIR}/ovmf/OVMF_CODE.fd"
-OVMF_VARS_PATH="${QEMU_DIR}/ovmf/OVMF_VARS.fd"
-
+OVMF_SYSTEM_PATH="/usr/share/ovmf/OVMF.fd"
 BUILD_DIR="./build"
 FINAL_ELF="${BUILD_DIR}/multiboot2-kernel_x86_64.elf"
 
@@ -27,7 +21,6 @@ fn_main() {
   rm -rf "${QEMU_VOLUME_DIR}"
 
   fn_prepare_grub_installation
-  fn_prepare_ovmf
   fn_start_qemu
 }
 
@@ -37,6 +30,9 @@ fn_start_qemu() {
           # Disable default devices
           # QEMU by default enables a ton of devices which slow down boot.
           "-nodefaults"
+
+          "-bios"
+          "${OVMF_SYSTEM_PATH}"
 
           # Use a standard VGA for graphics
           "-vga"
@@ -55,13 +51,7 @@ fn_start_qemu() {
 
           # Allocate some memory
           "-m"
-          "128M"
-
-          # Set up OVMF
-          "-drive"
-          "if=pflash,format=raw,readonly,file=${OVMF_FW_PATH}"
-          "-drive"
-          "if=pflash,format=raw,file=${OVMF_VARS_PATH}"
+          "2048M"
 
           # Mount a local directory as a FAT partition
           "-drive"
@@ -76,7 +66,7 @@ fn_start_qemu() {
 
           # https://qemu-project.gitlab.io/qemu/system/invocation.html
           # using this, the program can write to X86 I/O port 0xe9 and talk
-          # to qemu => debug output
+          # to QEMU => debug output
           "-debugcon"
           # or "/dev/stdout" => it appears in terminal window
           # this is poorly documented! I found out by coincidence, that I can use a file like this
@@ -85,6 +75,9 @@ fn_start_qemu() {
           # Setup monitor
           "-monitor"
           "vc:1024x768"
+
+          # now reboot loop on broken code
+          "-no-reboot"
   )
 
   echo "Executing: qemu-system-x86_64 " "${QEMU_ARGS[@]}"
@@ -104,20 +97,6 @@ fn_prepare_grub_installation() {
       # this is poorly documented, but the tool allows to specify key-value
       # pairs where the value on the right, a file, will be built into the "(memdisk)"
       # volume inside the grub image
-}
-
-
-# Puts the OVMF-files into a local directory,
-# because otherwise QEMU fails with "lack of permission".
-fn_prepare_ovmf() {
-    # aborts if these files do not exist
-  echo "check if OVMF-files exist"
-  rm -rf $QEMU_DIR/ovmf
-  mkdir -p $QEMU_DIR//ovmf
-  stat $OVMF_SYSTEM_PATH/"OVMF_CODE.fd" > /dev/null 2>&1
-  stat $OVMF_SYSTEM_PATH/"OVMF_VARS.fd" > /dev/null 2>&1
-  cp $OVMF_SYSTEM_PATH/"OVMF_VARS.fd" $QEMU_DIR/ovmf
-  cp $OVMF_SYSTEM_PATH/"OVMF_CODE.fd" $QEMU_DIR/ovmf
 }
 
 #########################################

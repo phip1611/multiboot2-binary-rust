@@ -1,0 +1,9 @@
+[build]
+# common shared target dir in project root
+target-dir = "../../target/"
+# target is a compiler built-in
+target = "x86_64-unknown-none"
+
+# Ineffective, as we pass RUSTFLAGS as environment variable
+# in the Makefile. This has a higher precedence.
+# rustflags = []
