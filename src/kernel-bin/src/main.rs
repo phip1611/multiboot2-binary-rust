@@ -13,6 +13,8 @@
 // required to access ".message()" on PanicInfo
 #![feature(panic_info_message)]
 #![deny(missing_debug_implementations)]
+// todo change once I boot into the kernel
+#![allow(unused)]
 
 // ONLY USE ALLOCATIONS WHEN AN ALLOCATOR WAS SET UP!
 #[macro_use]
@@ -41,11 +43,15 @@ use uefi::table::{Runtime, SystemTable};
 use uefi::Handle;
 // use uefi::proto::console::text::Color;
 
+/// High-level entry into the kernel for the bootstrap processor (BSP) once the CPU was initialized
+/// to x86_64 long mode. At this point, paging is enabled and we can do all further setup inside
+/// the Rust code.
+///
 /// This symbol is referenced in "start.S". It doesn't need the "pub"-keyword,
 /// because visibility is a Rust feature and not important for the object file.
 #[no_mangle]
-fn entry_rust(multiboot2_magic: u32, multiboot2_info_ptr: u32) -> ! {
-    // Error, Warn, Info, Debug -> Log to screen
+fn entry_rust_x86_64_bsp() -> ! {
+    /*// Error, Warn, Info, Debug -> Log to screen
     // everything + Trace -> Log only to file
     LOGGER.init(LevelFilter::Debug);
     kernelheap::init();
@@ -117,7 +123,7 @@ fn entry_rust(multiboot2_magic: u32, multiboot2_info_ptr: u32) -> ! {
             .filter(|x| x.is_some())
             .map(|x| x.unwrap())
             .collect::<alloc::vec::Vec<_>>()
-    );
+    );*/
 
     loop {}
 }

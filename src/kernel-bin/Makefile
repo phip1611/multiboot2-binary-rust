@@ -19,7 +19,7 @@ kernel: | kernel_build # verify_elf
 
 kernel_build: | code_style
 	# I build both so that I can regularly switch. The debug build is useful as it has debug
-	# symbols. This accelerates debugging  when something fails .
+	# symbols. This accelerates debugging when something fails .
 	cargo build
 	cargo build --release
 

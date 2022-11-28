@@ -7,9 +7,5 @@
 //! assembly code available in AT&T syntax for comparison.
 
 core::arch::global_asm!(include_str!("macros.S"), options(att_syntax));
-core::arch::global_asm!(include_str!("boot_stack.S"), options(att_syntax));
-#[rustfmt::skip]
-core::arch::global_asm!(include_str!("mb2_start.S"), options(att_syntax));
+core::arch::global_asm!(include_str!("start.S"), options(att_syntax));
 core::arch::global_asm!(include_str!("mb2_header.S"));
-core::arch::global_asm!(include_str!("strings.S"), options(att_syntax));
-core::arch::global_asm!(include_str!("qemu_debugcon.S"), options(att_syntax));

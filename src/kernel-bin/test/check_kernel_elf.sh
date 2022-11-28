@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# This script helps to check if the structure of the ELF changes. As early boot code heavily relies
+# on certain properties (such as addresses and offsets), this is something that we want.
+
 set -e
 
 EXPECTED_FILE=test/expected_readelf.txt

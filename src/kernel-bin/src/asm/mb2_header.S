@@ -42,16 +42,16 @@
         .Lmb2_header_tag_efiamd64_end:
         # ------------------------------------------------------------------------------------
         # "Relocatable"-tag
-        #.ALIGN 8
-        #.Lmb2_header_tag_relocatable_start:
-        #    .WORD  10      # type  (16bit)
-        #    .WORD  0       # flags (16bit) (0 means required, 1 optional)
-        #    .LONG  .Lmb2_header_tag_relocatable_end - .Lmb2_header_tag_relocatable_start   # size  (32bit)
-        #    # According to spec, this has a higher precedence, than the regular start-symbol from the ELF.
-        #    .LONG  0x100000    # lowest possible address (8MiB)
-        #    .LONG  0x0fffffff  # highest possible address (4GiB - enough space for kernel)
-        #    .LONG  0x200000    # alignment (2 MiB to enable super pages)
-        #    .LONG  0           # preference: 0 (none), 1 (lowest possible), 2 (highest possible)
+        .ALIGN 8
+        .Lmb2_header_tag_relocatable_start:
+            .WORD  10      # type  (16bit)
+            .WORD  0       # flags (16bit) (0 means required, 1 optional)
+            .LONG  .Lmb2_header_tag_relocatable_end - .Lmb2_header_tag_relocatable_start   # size  (32bit)
+            # According to spec, this has a higher precedence, than the regular start-symbol from the ELF.
+            .LONG  0x100000    # lowest possible address (8MiB)
+            .LONG  0x0fffffff  # highest possible address (4GiB - enough space for kernel)
+            .LONG  0x200000    # alignment (2 MiB to enable super pages)
+            .LONG  0           # preference: 0 (none), 1 (lowest possible), 2 (highest possible)
         .Lmb2_header_tag_relocatable_end:
         # ------------------------------------------------------------------------------------
         # REQUIRED END TAG
