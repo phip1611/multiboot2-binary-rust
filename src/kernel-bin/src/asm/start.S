@@ -47,6 +47,10 @@ entry_mb2_64_bit_efi:
     M_LINK_TO_LOAD_ADDR_IN_RAX_64 boot_stack_end
     mov     %rax,   %rsp
 
+    M_LINK_TO_LOAD_ADDR_IN_RAX_64 str_hello_world
+    # (Compiler produces a relative call -> it works with relocations)
+    call debugcon_print_string_until_null_64bit
+
     mov  $0xdeadbeef,    %rbx
     cli
     hlt
