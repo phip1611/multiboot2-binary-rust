@@ -1,14 +1,22 @@
 # Specifies the Multiboot2 header.
-# Uses GAS-like syntax in intel noprefix mode (the default for Rust assembly).
-
-# entry point into start routine (start.S)
-.extern entry_mb2_64_bit_efi
+#
+# Instructs the bootloader to brings the machine into the "i386 machine state" according to the
+# Multiboot2 spec. We can't use the "EFI I386/amd64 machine state with boot services enabled" states
+# as they only work with activated UEFI boot services. I can't set up page tables from assembly
+# with activated boot services, as UEFI expects to own the firmware. For example, interrupts would
+# be handled by UEFI. Once I change the page table, certain UEFI data structures will usually
+# not be found anymore.
+#
+# Because of that, this kernel uses the "i386 machine state" as unified entry point on legacy
+# BIOS and UEFI systems.
+#
+# The file uses GAS-like syntax in intel noprefix mode.
 
 .align 8 # according to spec, the header must be 64-bit (8 byte) aligned
 .section .multiboot2_header
 
     mb2_header_start:
-        #   dd => int 32, see https:#www.cs.uaf.edu/2017/fall/cs301/reference/x86_64.html
+        #   dd => int 32, see https://www.cs.uaf.edu/2017/fall/cs301/reference/x86_64.html
         .LONG  0xe85250d6                # magic number (multiboot2 spec)
         .LONG  0                         # architecture 0 (protected mode i386; spec doesn't specify many options)
         .LONG  mb2_header_end - mb2_header_start # header length
@@ -16,30 +24,6 @@
         .LONG  0x100000000 - (0xe85250d6 + 0 + (mb2_header_end - mb2_header_start))
 
         # OPTIONAL MULTIBOOT2 TAGS
-        # In order to boot into "EFI amd64 machine state with boot services enabled" (3.5 in Spec, 2021-06)
-        # machine state, we must specify a few additional tags:
-        #
-        # ------------------------------------------------------------------------------------
-        # "EFI boot services"-tag: leaves UEFI boot services enabled: its our task to exit them
-        .ALIGN 8 # alignment in bits: according to multiboot2 spec all tags are 8-byte (64-bit) aligned
-        .Lmb2_header_tag_ebs_start:
-            .WORD  7       # type  (16bit)
-            .WORD  0       # flags (16bit) (0 means required, 1 optional)
-            .LONG  .Lmb2_header_tag_ebs_end - .Lmb2_header_tag_ebs_start       # size  (32bit)
-        .Lmb2_header_tag_ebs_end:
-        # ------------------------------------------------------------------------------------
-        # "EFI i386 entry address tag of Multiboot2 header"-tag
-        # If we boot on BIOS, this is... TODO ignored?
-        .ALIGN 8
-        .Lmb2_header_tag_efiamd64_start:
-            .WORD  9       # type  (16bit)
-            .WORD  0       # flags (16bit) (0 means required, 1 optional)
-            .LONG  .Lmb2_header_tag_efiamd64_end - .Lmb2_header_tag_efiamd64_start     # size  (32bit)
-            # Address to jump to.
-            #  GRUB source code: https://github.com/rhboot/grub2/blob/a53e530f8ad3770c3b03c208c08ae4162f68e3b1/grub-core/loader/multiboot_mbi2.c#L212
-            # According to MB2 spec, this has a higher precedence, than the regular start-symbol from the ELF.
-            .LONG entry_mb2_64_bit_efi # entry_addr (32bit)
-        .Lmb2_header_tag_efiamd64_end:
         # ------------------------------------------------------------------------------------
         # "Relocatable"-tag
         .ALIGN 8

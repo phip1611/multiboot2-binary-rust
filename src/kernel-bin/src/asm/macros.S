@@ -6,15 +6,11 @@
 # Verifies that there was a valid handoff from a multiboot2 bootloader by checking the
 # magic value in %ecx.
 #
-# Inputs:
-# - %ecx - Multiboot magic
-# Outputs:
-# - none
-# Clobbers: %edx, rflags
+# Input Registers:
+#   - %eax - the Multiboot2 magic number
+# Clobbers: rflags
 .macro M_ASSERT_MB2_HANDOFF
-    mov     $MULTIBOOT2_MAGIC,  %edx
-    # %ecx should contain the magic value
-    cmp     %edx,               %eax
+    cmp     $MULTIBOOT2_MAGIC,  REG_MB2_MAGIC
     # relative jump to following code
     je      0f
 
@@ -27,23 +23,25 @@
     # flow continues..
 .endm
 
-# Calculates the offset between link address and load address during runtime and put it into
-# register %edx. This offset can be added to known link addresses of certain symbols to find them
-# during runtime.
+# Calculates the offset between link address and load address during runtime and put it into the
+# provided register. This offset can be added to known link addresses of certain symbols to find
+# them during runtime.
 #
 # Useful in 32-bit code. In 64-bit x86, an approach using the lea instruction should be used
 # instead.
 #
-# Inputs:
+# Input Registers:
+# - None
+# Parameters:
 # - reg_tmp_addr: Register (distinct from the clobbered ones down below) with the begin address
-#                 of a 4-byte long memory area that can be used as temporal storage. Must be
-#                 valid and in physical ram. The original content will be restored after this
-#                 code is done. Valid options depend on the platform. One valid option is the
-#                 pointer to the Multiboot Information Structure (MBI) in Multiboot payloads.
+#   of a 4-byte long memory area that can be used as temporal storage. Must be valid and in physical
+#   ram. The original content will be restored after this code is done. Valid options depend on the
+#   platform. One valid option is to pass the pointer to the Multiboot Information Structure (MBI).
+# - out_reg: Register for the output value.
 # Outputs:
-# - %edx
-# Clobbers: %eax, %edx, %esp
-.macro M_LOAD_ADDR_OFFSET_IN_EDX_32BIT reg_tmp_addr
+# - Provided parameter 'out_reg' will contain the offset
+# Clobbers: %eax, %esp, parameter out_reg
+.macro M_LOAD_ADDR_OFFSET_IN_EDX_32BIT reg_tmp_addr out_reg
         # prepare minimal stack for the next call
         mov     (\reg_tmp_addr),   %eax    # save original memory content
         mov     \reg_tmp_addr,     %esp
@@ -54,59 +52,71 @@
         pop     %edx
         # Substracting the link address of label "1" from the instruction pointer in %edx.
         # %eax now contains the offset between link address and load address (=runtime address).
-        sub     $1b,            %edx
+        sub     $1b,            \out_reg
 
         # restore memory
         mov     %eax,           (\reg_tmp_addr)
 .endm
 
 # Calculates the real load address from the link address of a known symbol and stores
-# it in register %eax. Assumes that %edx contains the offset.
+# it in the provided register %eax. Assumes that %edx contains the offset.
 #
 # Operates on 32 bit registers.
 #
 # Inputs:
-# - %edx: The runtime offset from the link address
-# - link_addr: Link address as immediate or by its symbol name
+# - offset_reg: The 32-bit register that contains the relocation offset).
+# - link_addr: Link address as immediate or by its symbol name.
+# - out_reg: Register where the output should be stored.
 # Outputs:
 # - %eax - The real load address of the symbol
 # Clobbers: %eax
-.macro M_LINK_TO_LOAD_ADDR_IN_EAX_32 link_addr
-    mov     %edx,           %eax
-    add     \link_addr,     %eax
+.macro M_LINK_TO_LOAD_ADDR_IN_EAX_32 offset_reg link_addr out_reg
+    mov     \offset_reg,    \out_reg
+    add     $\link_addr,    \out_reg
 .endm
 
-# Calculates the offset between link address and load address during runtime and put it into
-# register %rax. This offset can be added to known link addresses of certain symbols to find them
-# during runtime.
-#
-# Operates on 64 bit registers and needs 64-bit mode opcodes.
+# Computes the page table index for an address depending on the level.
 #
 # Inputs:
-# - None
+#  - level: 1, 2, 3, or 4
+#  - vaddr: virtual address
+#  - working_register: register to use for the output value
 # Outputs:
-# - %rax - The real load address of the symbol
-# Clobbers: %rax
-.macro M_LOAD_ADDR_OFFSET_IN_RDX_64BIT
-        # load address of label "1" plus value in %rip into %rax
-        lea        1f(%rip),    %rax
-    1:
-        # substract value from label "1" from %rax => actual runtime address of symbol "1"
-        # => rax now contains the runtime load offset
-        sub        $1b,         %rax
+#   - %rax - the index in the page table
+# Clobbers: The provided working register
+.macro M_PAGE_TABLE_ENTRY_INDEX level, vaddr, working_register
+    # We bit-shift to the right:
+    # * 9 as each level is indexed by 9 bits (with x86_64 4 level paging)
+    # + 12 used as index into the page
+    shr     $((\level - 1) * 9 + 12), \working_register
+    # Select the 9 bits which are the index.
+    and     $0x1ff,             \working_register
 .endm
 
-# Calculates the real load address from the link address of a known symbol and stores
-# it in register %eax. Assumes that %edx contains the offset.
-#
-# Operates on 64 bit registers and needs 64-bit mode opcodes.
-#
+# Writes a page table entry.
 # Inputs:
-# - link_addr: Link address by its symbol name
+#  - level: 1, 2, 3, or 4
+#  - vaddr: the virtual address used for this mapping
+#  - phys_src_table: symbol name of backing storage for source table (the one that needs an entry)
+#  - phys_dest_table: symbol name of backing storage for next level page table
+#  - permissions: page table permissions (bits 11..0)
 # Outputs:
-# - %rax - The real load address of the symbol
-# Clobbers: %rax
-.macro M_LINK_TO_LOAD_ADDR_IN_RAX_64 link_addr
-    M_LOAD_ADDR_OFFSET_IN_RDX_64BIT
-    add     $\link_addr,     %rax
+#   - None.
+# Clobbers: %eax, %ebx, %ecx
+.macro M_PAGE_TABLE_WRITE_ENTRY level, vaddr, phys_src_table, phys_dest_table, permissions
+    # when this code is done, the following applies:
+    # %eax => physical address of page table entry in the corresponding table
+    # %ebx => index into the page table for the entry
+    # %ecx => the page table entry
+
+    M_LINK_TO_LOAD_ADDR_IN_RAX_64 \phys_dest_table # runtime physical address of table of next level
+    M_PAGE_TABLE_ENTRY_INDEX    4,  \vaddr,     %ebx
+    add     $\permissions,   %eax    # entry: add bits: present, read only, implicitly executable
+    mov     %eax,   %ecx    # save page table entry in ecx
+    M_LINK_TO_LOAD_ADDR_IN_RAX_64 \phys_src_table # runtime physical address of lvl4 table
+    add     %ebx,   %eax    # location to write entry to = base address + index
+    mov     %ecx,   (%eax)  # write entry in %ecx to address behind %eax
 .endm
+
+
+

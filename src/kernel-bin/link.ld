@@ -4,7 +4,7 @@
  */
 
 /** Symbol comes from mb2_start_32bit_legacy.S */
-ENTRY(entry_mb2_32bit_default)
+ENTRY(entry_mb2_32bit)
 
 /* Program headers. Also called segments. */
 PHDRS

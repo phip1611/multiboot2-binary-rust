@@ -53,34 +53,3 @@ debugcon_print_byte_32bit:
     movw    $DEBUGCON_PORT,  %dx
     out     %al,    %dx
     ret
-
-.code64
-
-# Version of debugcon_print_string_until_null_64bit that is callable from 64-bit code.
-debugcon_print_string_until_null_64bit:
-    # load byte behind string pointer
-    movb    (%eax),     %cl
-    # null byte check
-    cmp     $0,         %cl
-    # jump zero is always relative
-    jz      0f
-    # prepare function arguments; %cl => %al
-    xchg    %eax,       %ecx
-    # (Compiler produces a relative call -> it works with relocations)
-    call    debugcon_print_byte_64bit
-    # restore string pointer in %eax
-    xchg    %eax,       %ecx
-    # increase string pointer
-    inc     %eax
-    # do again for next byte of string
-    # (Compiler produces a relative jump -> it works with relocations)
-    jmp     debugcon_print_string_until_null_64bit
-    0: ret
-
-# Version of debugcon_print_byte_32bit that is callable from 64-bit code.
-debugcon_print_byte_64bit:
-    # 0xe9 => I/O port of debugcon device
-    # movw: 16 bit
-    movw    $DEBUGCON_PORT,  %dx
-    out     %al,    %dx
-    ret
