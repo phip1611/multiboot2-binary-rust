@@ -72,7 +72,8 @@ fn_start_qemu() {
           # this is poorly documented! I found out by coincidence, that I can use a file like this
           "file:qemu/debugcon.txt"
 
-          # Setup monitor
+          # Setup monitor. Also required for the debug interface,
+          # i.e., the compatmonitor
           "-monitor"
           "vc:1024x768"
 
