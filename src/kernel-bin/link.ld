@@ -29,10 +29,10 @@ PHDRS
    file. They can be referenced from Assembly code, for example. */
 
 /* Base load address for the ELF
-   The value 8M is chosen at will. It is not important as the bootloader relocates us
+   The value is chosen at will. It is not important as the bootloader relocates us
    anyway. Must be within a range where GRUB can load us with Multiboot2, thus, in the first
    4 GB. */
-LOAD_ADDR = 8M;
+LOAD_ADDR = 0x800000; /* 8 MiB */
 
 /* Virtual address where we want our kernel in the end. Only high level code from Rust lives
    here.  */

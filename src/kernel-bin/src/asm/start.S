@@ -42,6 +42,18 @@ entry_mb2_32bit_default:
 .code64
 entry_mb2_64_bit_efi:
     M_ASSERT_MB2_HANDOFF
-    mov  $0xdeadbeef,    %eax
+
+    # setup stack
+    M_LINK_TO_LOAD_ADDR_IN_RAX_64 boot_stack_end
+    mov     %rax,   %rsp
+
+    mov  $0xdeadbeef,    %rbx
     cli
     hlt
+
+# Static backing storage for a minimal 512 byte stack.
+# Enough to call multiple levels of code.
+.align 4
+boot_stack_begin:
+.fill 512, 1, 0
+boot_stack_end:
