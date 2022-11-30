@@ -32,9 +32,9 @@
             .WORD  0       # flags (16bit) (0 means required, 1 optional)
             .LONG  .Lmb2_header_tag_relocatable_end - .Lmb2_header_tag_relocatable_start   # size  (32bit)
             # According to spec, this has a higher precedence, than the regular start-symbol from the ELF.
-            .LONG  0x00800000  # lowest possible address (8 MiB)
-            .LONG  0x0fffffff  # highest possible address (4 GiB minus enough space for kernel)
-            .LONG  0x200000    # alignment (2 MiB to enable super pages)
+            .LONG  0x00800000  # lowest possible address where binary can begin (8 MiB)
+            .LONG  0xffffffff  # highest possible address where binary must end (4 GiB)
+            .LONG  0x00200000  # alignment (2 MiB to enable super pages)
             .LONG  0           # preference: 0 (none), 1 (lowest possible), 2 (highest possible)
         .Lmb2_header_tag_relocatable_end:
         # ------------------------------------------------------------------------------------

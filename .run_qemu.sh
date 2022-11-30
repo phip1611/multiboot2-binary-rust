@@ -44,14 +44,14 @@ fn_start_qemu() {
 
           # Use a modern machine, with acceleration if possible.
           "-machine"
-          # "q35" # also works, but slower
+          "q35" # also works, but slower
           # Interesting to see how this changes CPU-ID
           # Without KVM the Hypervisor is QEMU, else it's KVM
-          "q35,accel=kvm:tcg"
+          # "q35,accel=kvm:tcg"
 
           # Allocate some memory
           "-m"
-          "2048M"
+          "256M"
 
           # Mount a local directory as a FAT partition
           "-drive"
@@ -73,11 +73,11 @@ fn_start_qemu() {
           "file:qemu/debugcon.txt"
 
           # Setup monitor. Also required for the debug interface,
-          # i.e., the compatmonitor
+          # i.e., the compatmonitor.
           "-monitor"
           "vc:1024x768"
 
-          # now reboot loop on broken code
+          # no reboot loop on broken code
           "-no-reboot"
   )
 

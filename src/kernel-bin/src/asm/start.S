@@ -31,152 +31,45 @@
 #                      See: https://phip1611.de/blog/gnu-ld-discards-section-containing-code/
 .section .init_asm, "ax"
 
+.align 4
 .code32
 entry_mb2_32bit:
     M_ASSERT_MB2_HANDOFF
 
-    # find load address offset (are we relocated?)
-    M_LOAD_ADDR_OFFSET_IN_EDX_32BIT REG_MB2_INFO REG_LOAD_OFFSET
-    # setup stack
-    M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET mem_boot_stack_end %esp
+    # Find load address offset (are we relocated?).
+    # We use the pointer to the MBI as temporary stack. Look into the macro description for details.
+    M_CALC_LOAD_ADDR_OFFSET_32BIT REG_MB2_INFO, REG_LOAD_OFFSET
 
-    M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET str_hello_world %eax
-    call debugcon_print_string_until_null_32bit
+    # Setup a small stack.
+    M_RESOLVE_RUNTIME_ADDR mem_boot_stack_end,  %esp
 
-    # I now start creating our boot page table in preallocated memory. I need five page tables
-    # (Level 4, 2x Level 3, 2x Level 2) whereras each level 2 table creates one 2 MiB huge page
-    # mapping for the kernel in high memory and one in low memory. After that, I jump into high
-    # level Rust code and do all further setup.
+    # Print hello world via QEMU's debugcon device.
+    M_DEBUGCON_PRINT_32 str_hello_world
 
-    # Create PML4 entry in %rax
+    # Now, I want to make the switch from 32-bit protected mode without paging to paging enabled.
+    # I start creating boot page table in preallocated memory for the low memory (where this code
+    # is running).
 
-    M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET mem_lvl3h %eax
-    M_PAGE_TABLE_ENTRY_INDEX    4,  $LINK_ADDR,     %ebx
-    add     $0x1,   %eax    # entry: add bits: present, read only, implicitly executable
-    mov     %eax,   %ecx    # save entry in ecx
-    M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET mem_lvl4 %eax # runtime physical address of lvl3 table
-    add     %ebx,   %eax    # location to write entry to = base address + index
-    mov     %ecx,   (%eax)  # write entry in %ecx to address behind %eax
+    /* BEGIN: IDENTITY MAP FOR LOAD_ADDR (WITH RESPECT TO RELOCATION) */
+        M_RESOLVE_RUNTIME_ADDR LOAD_ADDR,   %ebp
+        # permission bits: present, read only, implicitly executable
+        M_PAGE_TABLE_WRITE_ENTRY 3, %ebp, mem_lvl3l, mem_lvl2l, 0x1
 
-    M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET mem_lvl2h %eax
-    M_PAGE_TABLE_ENTRY_INDEX    4,  $LINK_ADDR,     %ebx
-    add     $0x1,   %eax    # entry: add bits: present, read only, implicitly executable
-    mov     %eax,   %ecx    # save entry in ecx
-    M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET mem_lvl3h %eax # runtime physical address of lvl3 table
-    add     %ebx,   %eax    # location to write entry to = base address + index
-    mov     %ecx,   (%eax)  # write entry in %ecx to address behind %eax
+        M_RESOLVE_RUNTIME_ADDR LOAD_ADDR,   %ebp
+        # permission bits: present, read only, implicitly executable, 2 MiB huge page
+        # LOAD_ADDR: the macro will resolve the runtime address internally
+        M_PAGE_TABLE_WRITE_ENTRY 2, %ebp, mem_lvl2l, LOAD_ADDR, 0x81
+    /* END:   IDENTITY MAP FOR LOAD_ADDR (WITH RESPECT TO RELOCATION) */
 
-    M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET LOAD_ADDR %eax
-    M_PAGE_TABLE_ENTRY_INDEX    4,  $LINK_ADDR,     %ebx
-    add     $0x1,   %eax    # entry: add bits: present, read only, implicitly executable
-    mov     %eax,   %ecx    # save entry in ecx
-    M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET mem_lvl2h %eax # runtime physical address of lvl3 table
-    add     %ebx,   %eax    # location to write entry to = base address + index
-    mov     %ecx,   (%eax)  # write entry in %ecx to address behind %eax
+    # init paging
+    M_RESOLVE_RUNTIME_ADDR mem_lvl3l,   %eax
+    mov     %eax,           %cr3
 
-    M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET mem_lvl3l %eax
-    M_PAGE_TABLE_ENTRY_INDEX    4,  $LINK_ADDR,     %ebx
-    add     $0x1,   %eax    # entry: add bits: present, read only, implicitly executable
-    mov     %eax,   %ecx    # save entry in ecx
-    M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET mem_lvl4 %eax # runtime physical address of lvl3 table
-    add     %ebx,   %eax    # location to write entry to = base address + index
-    mov     %ecx,   (%eax)  # write entry in %ecx to address behind %eax
+    # set paging (PG) and protection (PE) bits in cr0
+    mov     %cr0,           %eax
+    or      $0x80000001,    %eax
+    mov     %eax,           %cr0
 
-    M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET mem_lvl2l %eax
-    M_PAGE_TABLE_ENTRY_INDEX    4,  $LINK_ADDR,     %ebx
-    add     $0x1,   %eax    # entry: add bits: present, read only, implicitly executable
-    mov     %eax,   %ecx    # save entry in ecx
-    M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET mem_lvl3l %eax # runtime physical address of lvl3 table
-    add     %ebx,   %eax    # location to write entry to = base address + index
-    mov     %ecx,   (%eax)  # write entry in %ecx to address behind %eax
-
-    M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET LOAD_ADDR %eax
-    M_PAGE_TABLE_ENTRY_INDEX    4,  $LINK_ADDR,     %ebx
-    add     $0x1,   %eax    # entry: add bits: present, read only, implicitly executable
-    mov     %eax,   %ecx    # save entry in ecx
-    M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET mem_lvl2l %eax # runtime physical address of lvl3 table
-    add     %ebx,   %eax    # location to write entry to = base address + index
-    mov     %ecx,   (%eax)  # write entry in %ecx to address behind %eax
-
-     /*
-     * Enable the following features in IA32_EFER:
-     *
-     * - the SYSCALL/SYSRET instructions,
-     * - the page table NX bits,
-     * - IA-32e (64-bit) mode.
-     */
-    or      $0x901, %eax
-    # wrmsr
-    #mov     $0x6b8, %eax
-    #mov     %eax, %cr4
-    #M_LINK_TO_LOAD_ADDR_IN_EAX_32 REG_LOAD_OFFSET mem_lvl4 %eax
-    #mov     %eax, %cr3
-    #mov     $0x80010023, %eax
-    #mov     %eax, %cr0
-
-/*
-
-
-    # Create PML4 entry in %rax
-
-    M_LINK_TO_LOAD_ADDR_IN_RAX_64 mem_lvl3h # runtime physical address of lvl3 table
-    M_PAGE_TABLE_ENTRY_INDEX    4,  $LINK_ADDR,     %ebx
-    add     $0x1,   %eax    # entry: add bits: present, read only, implicitly executable
-    mov     %eax,   %ecx    # save entry in ecx
-    M_LINK_TO_LOAD_ADDR_IN_RAX_64 mem_lvl4 # runtime physical address of lvl4 table
-    add     %ebx,   %eax    # location to write entry to = base address + index
-    mov     %ecx,   (%eax)  # write entry in %ecx to address behind %eax
-
-    M_LINK_TO_LOAD_ADDR_IN_RAX_64 mem_lvl2h # runtime physical address of lvl2 table
-    M_PAGE_TABLE_ENTRY_INDEX    3,  $LINK_ADDR,     %ebx
-    add     $0x1,   %eax    # entry: add bits: present, read only, implicitly executable
-    mov     %eax,   %ecx    # save entry in ecx
-    M_LINK_TO_LOAD_ADDR_IN_RAX_64 mem_lvl3h # runtime physical address of lvl3 table
-    add     %ebx,   %eax    # location to write entry to = base address + index
-    mov     %ecx,   (%eax)  # write entry in %ecx to address behind %eax
-
-    M_LINK_TO_LOAD_ADDR_IN_RAX_64 LOAD_ADDR # runtime physical address of kernel code
-    M_PAGE_TABLE_ENTRY_INDEX    2,  $LINK_ADDR,     %ebx
-    add     $0x81,  %eax    # entry: add bits: present, read only, implicitly executable, 2 Mib huge page
-    mov     %eax,   %ecx    # save entry in ecx
-    M_LINK_TO_LOAD_ADDR_IN_RAX_64 mem_lvl2h # runtime physical address of lvl4 table
-    add     %ebx,   %eax    # location to write entry to = base address + index
-    mov     %ecx,   (%eax)  # write entry in %ecx to address behind %eax
-
-
-
-
-    // now map the currently executing code
-
-    M_LINK_TO_LOAD_ADDR_IN_RAX_64 mem_lvl3l # runtime physical address of lvl3 table
-    M_PAGE_TABLE_ENTRY_INDEX    4,  $LOAD_ADDR,     %ebx
-    add     $0x1,   %eax    # entry: add bits: present, read only, implicitly executable
-    mov     %eax,   %ecx    # save entry in ecx
-    M_LINK_TO_LOAD_ADDR_IN_RAX_64 mem_lvl4 # runtime physical address of lvl4 table
-    add     %ebx,   %eax    # location to write entry to = base address + index
-    mov     %ecx,   (%eax)  # write entry in %ecx to address behind %eax
-
-    M_LINK_TO_LOAD_ADDR_IN_RAX_64 mem_lvl2l # runtime physical address of lvl2 table
-    M_PAGE_TABLE_ENTRY_INDEX    3,  $LOAD_ADDR,     %ebx
-    add     $0x1,   %eax    # entry: add bits: present, read only, implicitly executable
-    mov     %eax,   %ecx    # save entry in ecx
-    M_LINK_TO_LOAD_ADDR_IN_RAX_64 mem_lvl3l # runtime physical address of lvl3 table
-    add     %ebx,   %eax    # location to write entry to = base address + index
-    mov     %ecx,   (%eax)  # write entry in %ecx to address behind %eax
-
-    M_LINK_TO_LOAD_ADDR_IN_RAX_64 LOAD_ADDR # runtime physical address of kernel code
-    M_PAGE_TABLE_ENTRY_INDEX    2,  $LOAD_ADDR,     %ebx
-    add     $0x81,  %eax    # entry: add bits: present, read only, implicitly executable, 2 Mib huge page
-    mov     %eax,   %ecx    # save entry in ecx
-    M_LINK_TO_LOAD_ADDR_IN_RAX_64 mem_lvl2l # runtime physical address of lvl4 table
-    add     %ebx,   %eax    # location to write entry to = base address + index
-    mov     %ecx,   (%eax)  # write entry in %ecx to address behind %eax
-
-
-    # refresh page table
-    M_LINK_TO_LOAD_ADDR_IN_RAX_64 mem_lvl4
-    mov     %rax, %cr3
-*/
     mov  $0xdeadbeef,    %ebx
     cli
     hlt

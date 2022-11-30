@@ -9,10 +9,10 @@
 
 # Prints a C-style string to the QEMU debugcon port. Only callable from 32-bit code.
 #
-# Parameters:
-#   1: %eax - Pointer to the begin of the string.
+# Input registers:
+#  - %eax - Pointer to the begin of the string.
 #
-# Clobbers: %eax, %ecx
+# Clobbers: %eax, %ecx, %edx/%dx
 debugcon_print_string_until_null_32bit:
     # load byte behind string pointer
     movb    (%eax),     %cl
