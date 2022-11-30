@@ -52,25 +52,25 @@ entry_mb2_32bit:
 
     /* BEGIN: IDENTITY MAP FOR BOOT_LINK_ADDR (WITH RESPECT TO RELOCATION) */
         M_RESOLVE_RUNTIME_ADDR BOOT_LINK_ADDR,   %ebp
-        # permission bits: present, read only, implicitly executable
-        M_PAGE_TABLE_WRITE_ENTRY 3, %ebp, mem_lvl3l, mem_lvl2l, 0x1
-
-        M_RESOLVE_RUNTIME_ADDR BOOT_LINK_ADDR,   %ebp
-        # permission bits: present, read only, implicitly executable, 2 MiB huge page
-        # LOAD_ADDR: the macro will resolve the runtime address internally
+        # entry bits: present, read only, implicitly executable, 4 MiB huge page
         M_PAGE_TABLE_WRITE_ENTRY 2, %ebp, mem_lvl2l, BOOT_LINK_ADDR, 0x81
     /* END:   IDENTITY MAP FOR BOOT_LINK_ADDR (WITH RESPECT TO RELOCATION) */
 
     # init paging
-    M_RESOLVE_RUNTIME_ADDR mem_lvl3l,   %eax
+    M_RESOLVE_RUNTIME_ADDR mem_lvl2l,   %eax
     mov     %eax,           %cr3
+
+    # Enable huge page support for 32-bit paging.
+    mov     %cr4,           %eax
+    or      $0x10,          %eax    # set bit 4 (Page Size Extension (PSE))
+    mov     %eax,           %cr4
 
     # set paging (PG) and protection (PE) bits in cr0
     mov     %cr0,           %eax
     or      $0x80000001,    %eax
     mov     %eax,           %cr0
 
-    mov  $0xdeadbeef,    %ebx
+    mov     $0xdeadbeef,    %ebx
     cli
     hlt
 

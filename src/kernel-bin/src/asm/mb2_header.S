@@ -34,7 +34,7 @@
             # According to spec, this has a higher precedence, than the regular start-symbol from the ELF.
             .LONG  0x00800000  # lowest possible address where binary can begin (8 MiB)
             .LONG  0xffffffff  # highest possible address where binary must end (4 GiB)
-            .LONG  0x00200000  # alignment (2 MiB to enable super pages)
+            .LONG  0x00400000  # alignment (4 MiB to enable super pages)
             .LONG  0           # preference: 0 (none), 1 (lowest possible), 2 (highest possible)
         .Lmb2_header_tag_relocatable_end:
         # ------------------------------------------------------------------------------------

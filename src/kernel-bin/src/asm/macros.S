@@ -84,6 +84,7 @@
 .endm
 
 # Computes the page table index for an address depending on the level.
+# TODO clarify whether this returns the index or the offset
 #
 # Inputs:
 #  - level: 1, 2, 3, or 4 (specifies which part of the virtual address is used).
@@ -93,13 +94,14 @@
 #   - The register behind the parameter 'out_reg' will contain the result.
 # Clobbers: out_reg
 .macro M_CALC_PAGE_TABLE_ENTRY_INDEX level, vaddr_reg, out_reg
-    mov     \vaddr_reg,   \out_reg
+    mov     \vaddr_reg,     \out_reg
     # We bit-shift the virtual address to the right.
     # * 9 as each level is indexed by 9 bits (with x86_64 4 level paging)
     # + 12 used as index into the page
-    shr     $((\level - 1) * 9 + 12),   \out_reg
-    # Now we select the 9 bits which are the index into the page table of the selected level.
-    and     $0x1ff,       \out_reg
+    shr     $((\level - 1) * 10 + 12),   \out_reg
+    # Now we select the 10 bits which are the index into the page table of the selected level.
+    and     $0x3ff,         \out_reg
+    imul    $4,             \out_reg # index * 4 as each entry is 4 byte long with 32-bit paging
 .endm
 
 # Writes a page table entry.
@@ -111,28 +113,30 @@
 #  - vaddr_reg: Register that contains the virtual address used for the mapping.
 #  - phys_src_table: Symbol name of backing storage for source table (the one that needs an entry).
 #  - phys_dest: Symbol name of physical memory to point to. Next table or (super) page.
-#  - permissions: page table permissions (bits 11..0)
+#  - entry_flags: page table entry flags (huge page, permission bits, ...) (bits 11..0)
 # Outputs:
 #   - None.
 # Clobbers: %eax, %ebp, %ecx
-.macro M_PAGE_TABLE_WRITE_ENTRY level, vaddr_reg, phys_src_table, phys_dest, permissions
+.macro M_PAGE_TABLE_WRITE_ENTRY level, vaddr_reg, phys_src_table, phys_dest, entry_flags
     # When this code is done, the following applies:
-    # %eax => physical write address of the page table entry in the corresponding destination table
-    # %ebp => index into the page table for the entry
-    # %ecx => the page table entry mapping to the next table
+    # %ebp => byte offset into the page table for the entry (index * sizeof(entry))
+    # %eax => page table entry that needs to be written into %ecx
+    # %ecx => pointer to the entry of the page table where the entry is written to;
+    #         already contains the index from %ebp
 
     # calculate index into the phys_src_table
     M_CALC_PAGE_TABLE_ENTRY_INDEX    \level,  \vaddr_reg,    %ebp
 
-    # Create 32-bit page table entry.
-    # resolve runtime physical address of table of next level
-    M_RESOLVE_RUNTIME_ADDR  \phys_dest,         %eax
-    add     $\permissions,  %eax   # add permission bits (lower 12 bits) to entry
-    mov     %eax,           %ecx   # save page table entry in ecx
+    # Create 32-bit page table entry in %eax.
+    mov     $\entry_flags,  %ecx
+    and     $0xfff,         %ecx   # ensure we only use the lowest 12 bits from the provided flags
+    M_RESOLVE_RUNTIME_ADDR  \phys_dest, %eax # put load address of page table into %eax
+    add     %ecx,           %eax   # add flags to entry
 
-    M_RESOLVE_RUNTIME_ADDR  \phys_src_table,    %eax
-    add     %ebp,           %eax
-    mov     %ecx,           (%eax)
+    # Write the entry to the table
+    M_RESOLVE_RUNTIME_ADDR  \phys_src_table,    %ecx    # dest phys address in %ecx
+    add     %ebp,           %ecx   # add index to table => %ecx is now pointer to table entry
+    mov     %eax,           (%ecx) # write entry to the correct index of the table
 .endm
 
 # Wrapper around debugcon_print_string_until_null_32bit that prints a null-terminated string

@@ -19,7 +19,7 @@ mem_lvl4:
 mem_lvl3h:
 .fill 4096, 1, 0
 
-# Backing memory for the Page Directory Table that has a 2MiB
+# Backing memory for the Page Directory Table that has a 4 MiB
 # for the high memory mapping (link address).
 .align 4096
 mem_lvl2h:
@@ -31,7 +31,7 @@ mem_lvl2h:
 mem_lvl3l:
 .fill 4096, 1, 0
 
-# Backing memory for the Page Directory Table that has a 2MiB
+# Backing memory for the Page Directory Table that has a 4 MiB
 # for the low memory mapping (load address).
 .align 4096
 mem_lvl2l:
