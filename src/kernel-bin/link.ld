@@ -34,22 +34,26 @@ PHDRS
    4 GB. */
 LOAD_ADDR = 0x800000; /* 8 MiB */
 
+/* Address where the boot code written in assembly is linked. */
+BOOT_LINK_ADDR = LOAD_ADDR;
+
 /* Virtual address where we want our kernel in the end. Only high level code from Rust lives
-   here.  */
-LINK_ADDR = 0xffffffff88000000;
+   here. */
+KERNEL_LINK_ADDR = 0xffffffff88000000;
 
 SECTIONS {
 
     /* Syntax is described here: https://sourceware.org/binutils/docs/ld/Output-Section-Attributes.html
 
-       ".init_asm"       :    The name of the (output) section. This overrides the name of the
-                              input sections. Name can be arbitrary but should follow conventions.
-       "8M"              :    Virtual address where the code is linked.
-       ": AT(LOAD_ADDR)" :    Set the physical load address to this address. GRUB uses this for
-                              example during boot.
-          ALIGN(4K)      :    Ensure a 4K-aligned offset within the ELF-file.
+       ".init_asm"      : The name of the (output) section. This overrides the name of the
+                          input sections. Name can be arbitrary but should follow conventions.
+       "BOOT_LINK_ADDR" : Virtual address where the code is linked. Relevant for absolute addressing
+                           of symbols.
+       ": AT(LOAD_ADDR)": Set the physical load address to this address. GRUB uses this for
+                          example during boot.
+          ALIGN(4K)     : Ensure a 4K-aligned offset within the ELF-file.
      */
-    .init_asm 8M : AT(LOAD_ADDR) ALIGN(4K)
+    .init_asm BOOT_LINK_ADDR : AT(LOAD_ADDR) ALIGN(4K)
     {
         /* According to spec, this must be in the first 32K of the binary. Because this section
            is in the the first load segment, this will also be at the beginning of the ELF. */
@@ -60,7 +64,7 @@ SECTIONS {
 
     /* Push one page further so that the offset between load address and link address is the same.
        This enables us to use super pages for the kernel. */
-    TEXT_LINK_ADDRESS = ALIGN(LINK_ADDR + SIZEOF(.init_asm), 4K);
+    TEXT_LINK_ADDRESS = ALIGN(KERNEL_LINK_ADDR + SIZEOF(.init_asm), 4K);
     TEXT_LOAD_ADDRESS = ALIGN(LOADADDR(.init_asm) + SIZEOF(.init_asm), 4K);
 
     .text TEXT_LINK_ADDRESS : AT(TEXT_LOAD_ADDRESS) ALIGN(4K)

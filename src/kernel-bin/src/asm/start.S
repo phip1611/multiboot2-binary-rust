@@ -24,7 +24,7 @@
 # Load address of the kernel.
 .extern LOAD_ADDR
 # Link address of the kernel.
-.extern LINK_ADDR
+.extern KERNEL_LINK_ADDR
 
 # "ax": section flags. Required so that the linker actually puts this into a LOAD segment. Linker
 #                      script magic alone is not enough.
@@ -50,16 +50,16 @@ entry_mb2_32bit:
     # I start creating boot page table in preallocated memory for the low memory (where this code
     # is running).
 
-    /* BEGIN: IDENTITY MAP FOR LOAD_ADDR (WITH RESPECT TO RELOCATION) */
-        M_RESOLVE_RUNTIME_ADDR LOAD_ADDR,   %ebp
+    /* BEGIN: IDENTITY MAP FOR BOOT_LINK_ADDR (WITH RESPECT TO RELOCATION) */
+        M_RESOLVE_RUNTIME_ADDR BOOT_LINK_ADDR,   %ebp
         # permission bits: present, read only, implicitly executable
         M_PAGE_TABLE_WRITE_ENTRY 3, %ebp, mem_lvl3l, mem_lvl2l, 0x1
 
-        M_RESOLVE_RUNTIME_ADDR LOAD_ADDR,   %ebp
+        M_RESOLVE_RUNTIME_ADDR BOOT_LINK_ADDR,   %ebp
         # permission bits: present, read only, implicitly executable, 2 MiB huge page
         # LOAD_ADDR: the macro will resolve the runtime address internally
-        M_PAGE_TABLE_WRITE_ENTRY 2, %ebp, mem_lvl2l, LOAD_ADDR, 0x81
-    /* END:   IDENTITY MAP FOR LOAD_ADDR (WITH RESPECT TO RELOCATION) */
+        M_PAGE_TABLE_WRITE_ENTRY 2, %ebp, mem_lvl2l, BOOT_LINK_ADDR, 0x81
+    /* END:   IDENTITY MAP FOR BOOT_LINK_ADDR (WITH RESPECT TO RELOCATION) */
 
     # init paging
     M_RESOLVE_RUNTIME_ADDR mem_lvl3l,   %eax
